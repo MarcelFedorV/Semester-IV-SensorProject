@@ -10,7 +10,7 @@ import json
 import sys
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 import uvicorn
 
 from ble_manager import BLEManager
@@ -56,6 +56,10 @@ app = FastAPI(lifespan=lifespan)
 @app.get("/")
 async def serve_frontend():
     return FileResponse("index.html")
+
+@app.get("/Start")
+def landing():
+    return FileResponse("Start.html")
 
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
