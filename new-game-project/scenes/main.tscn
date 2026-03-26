@@ -60,6 +60,7 @@ offset_top = -750.0
 offset_right = 92.5
 grow_horizontal = 2
 grow_vertical = 0
+theme_override_colors/font_color = Color(0.033016246, 0.008017216, 0.0078056874, 1)
 text = "Press UP arrow to move
 "
 

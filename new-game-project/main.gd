@@ -29,18 +29,32 @@ const CENTER_X_PCT    = 0.5
 var is_touching = false
 
 func _ready():
-	# Get actual screen size
+	catch_reveal.visible = false
+	status_label.text = "Press arrow keys to move"
+	# Wait one frame for viewport to be fully initialized
+	await get_tree().process_frame
+	_setup_layout()
+
+func _setup_layout():
 	var viewport = get_viewport().get_visible_rect().size
 	screen_w = viewport.x
 	screen_h = viewport.y
-
-	catch_reveal.visible = false
-	status_label.text = "Press arrow keys to move"
-
-	# Set initial line start point to dock position
+	
+	# Fix background
+	$Background.position = Vector2(0, 0)
+	$Background.size = Vector2(screen_w, screen_h)
+	$Background.color = Color(0.868, 0.88, 0.955, 1.0)
+	
+	# Fix water
+	var water_start_y = screen_h * DOCK_Y_PCT
+	water.position = Vector2(0, water_start_y)
+	water.size = Vector2(screen_w, screen_h - water_start_y)
+	
+	# Set line start
 	fishing_line.set_point_position(0, Vector2(screen_w * CENTER_X_PCT, screen_h * DOCK_Y_PCT))
 	fishing_line.set_point_position(1, Vector2(screen_w * CENTER_X_PCT, screen_h * DOCK_Y_PCT + 10))
-
+	
+	
 func _process(delta):
 	_handle_input()
 	_update_depth(delta)
