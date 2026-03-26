@@ -1,0 +1,92 @@
+[gd_scene format=3 uid="uid://c5744s7byhirb"]
+
+[ext_resource type="Script" uid="uid://bi3heij1uscrg" path="res://main.gd" id="1_o5qli"]
+
+[node name="Main" type="Node2D" unique_id=1390537299]
+script = ExtResource("1_o5qli")
+
+[node name="Background" type="ColorRect" parent="." unique_id=2078241678]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.005898415, 0.002855174, 0.0017368245, 1)
+
+[node name="WaterSurface" type="ColorRect" parent="." unique_id=895825666]
+custom_minimum_size = Vector2(390, 544)
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 300.0
+offset_right = 390.0
+offset_bottom = 844.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.16047382, 0.19730252, 0.7650473, 1)
+
+[node name="Line" type="Line2D" parent="." unique_id=1364468247]
+position = Vector2(362, 210)
+points = PackedVector2Array(195, 100, 195, 300)
+width = 2.0
+
+[node name="Bobber" type="ColorRect" parent="." unique_id=264317558]
+offset_right = 20.0
+offset_bottom = 20.0
+color = Color(0.7215217, 0.15755391, 0.1911807, 1)
+
+[node name="UI" type="CanvasLayer" parent="." unique_id=551231151]
+
+[node name="DepthBar" type="ProgressBar" parent="UI" unique_id=899484341]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_top = -27.0
+offset_right = 350.0
+grow_vertical = 0
+
+[node name="DepthLabel" type="Label" parent="UI" unique_id=349621187]
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="StatusLabel" type="Label" parent="UI" unique_id=2141535832]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -92.5
+offset_top = -750.0
+offset_right = 92.5
+grow_horizontal = 2
+grow_vertical = 0
+text = "Press UP arrow to move
+"
+
+[node name="CatchReveal" type="PanelContainer" parent="UI" unique_id=993133830]
+visible = false
+custom_minimum_size = Vector2(250, 0)
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -25.0
+offset_right = 20.0
+offset_bottom = 25.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UI/CatchReveal" unique_id=1316964738]
+layout_mode = 2
+
+[node name="FishName" type="Label" parent="UI/CatchReveal/VBoxContainer" unique_id=1248914809]
+layout_mode = 2
+autowrap_mode = 2
+
+[node name="FishDesc" type="Label" parent="UI/CatchReveal/VBoxContainer" unique_id=194769198]
+layout_mode = 2
+autowrap_mode = 2
+
+[node name="WebSocket" type="Node" parent="." unique_id=1092900758]

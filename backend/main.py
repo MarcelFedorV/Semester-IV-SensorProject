@@ -4,13 +4,15 @@ main.py — FastAPI server bridging BLE manager to browser.
 pip install fastapi uvicorn bleak
 python main.py  →  http://localhost:8000
 """
-
+import os
 import asyncio
 import json
 import sys
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
 import uvicorn
 
 from ble_manager import BLEManager
@@ -51,7 +53,15 @@ async def lifespan(app: FastAPI):
     await manager.disconnect()
     await manager.stop_scan()
 
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+        response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
+        return response
+
 app = FastAPI(lifespan=lifespan)
+app.add_middleware(SecurityHeadersMiddleware)
 
 @app.get("/")
 async def serve_frontend():
@@ -71,12 +81,27 @@ async def websocket_endpoint(ws: WebSocket):
         "devices": manager.get_devices(),
         "status":  manager.get_status(),
     }))
+
+    async def heartbeat():
+        while True:
+            await asyncio.sleep(30)
+            try:
+                await ws.send_text(json.dumps({"type": "ping"}))
+            except Exception:
+                break
+
+    heartbeat_task = asyncio.create_task(heartbeat())
+    
     try:
         while True:
             raw = await ws.receive_text()
             await handle_message(ws, json.loads(raw))
     except WebSocketDisconnect:
-        connections.remove(ws)
+        pass
+    finally:
+        heartbeat_task.cancel()
+        if ws in connections:
+            connections.remove(ws)
         print(f"[WS] Browser disconnected ({len(connections)} total)")
 
 
@@ -113,5 +138,8 @@ async def handle_message(ws: WebSocket, msg: dict):
             asyncio.create_task(manager.do_mode_switch(address, current_mode))
 
 
+if os.path.exists("games/FishingGame/index.html"):
+    app.mount("/FishingGame", StaticFiles(directory="games/FishingGame", html=True), name="fishing")
+
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=False)
