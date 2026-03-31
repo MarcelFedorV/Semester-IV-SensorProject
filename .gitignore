@@ -1,1 +1,2 @@
-backend/games/FishingGame/
+backend/games/FishingGame/*
+!backend/games/FishingGame/.gitkeep
