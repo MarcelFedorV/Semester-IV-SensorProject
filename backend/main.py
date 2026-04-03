@@ -14,8 +14,13 @@ from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 import uvicorn
+from fish_logic import pick_fish
+from fish_data import FISH_BY_ID, FISH
 
 from ble_manager import BLEManager
+
+app = FastAPI()
+
 
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -62,6 +67,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(SecurityHeadersMiddleware)
+
 
 @app.get("/")
 async def serve_frontend():
@@ -137,6 +143,38 @@ async def handle_message(ws: WebSocket, msg: dict):
         if address and current_mode:
             asyncio.create_task(manager.do_mode_switch(address, current_mode))
 
+
+
+# Temporary in-memory storage until DB is set up
+# key: patient_id, value: set of fish ids caught
+caught_collection = {}
+
+@app.post("/fish/catch")
+async def catch_fish(depth: float, patient_id: int = 1):
+    """Called by Godot when a fish is caught."""
+    fish = pick_fish(depth)
+    
+    # Add to collection
+    if patient_id not in caught_collection:
+        caught_collection[patient_id] = set()
+    caught_collection[patient_id].add(fish["id"])
+    
+    return {
+        "fish": fish,
+        "new": fish["id"] not in caught_collection.get(patient_id, set())
+    }
+
+@app.get("/fish/collection/{patient_id}")
+async def get_collection(patient_id: int):
+    """Returns full fish list with caught/uncaught status."""
+    caught = caught_collection.get(patient_id, set())
+    
+    return {
+        "collection": [
+            {**f, "caught": f["id"] in caught}
+            for f in FISH
+        ]
+    }
 
 if os.path.exists("games/FishingGame/index.html"):
     app.mount("/FishingGame", StaticFiles(directory="games/FishingGame", html=True), name="fishing")
