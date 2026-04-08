@@ -141,5 +141,11 @@ async def handle_message(ws: WebSocket, msg: dict):
 if os.path.exists("games/FishingGame/index.html"):
     app.mount("/FishingGame", StaticFiles(directory="games/FishingGame", html=True), name="fishing")
 
+SPACE_GAME_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "space-game")
+
+if os.path.exists(SPACE_GAME_DIR):
+    app.mount("/SpaceGame", StaticFiles(directory=SPACE_GAME_DIR, html=True), name="spacegame")
+
 if __name__ == "__main__":
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=False)
+

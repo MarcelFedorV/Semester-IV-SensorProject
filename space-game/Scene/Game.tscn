@@ -1,0 +1,58 @@
+[gd_scene format=3 uid="uid://4mxuihnamxgb"]
+
+[ext_resource type="PackedScene" uid="uid://ccpqowwiibaar" path="res://Scene/player.tscn" id="1_6igcf"]
+[ext_resource type="PackedScene" uid="uid://brkyfcb02juot" path="res://Scene/chunk.tscn" id="2_u6khg"]
+[ext_resource type="Script" uid="uid://caapqy5cid7al" path="res://Scripts/LevelGenerator.gd" id="3_ou18a"]
+[ext_resource type="PackedScene" uid="uid://ck62bf3q1jffd" path="res://Scene/TouchControls.tscn" id="4_mopgc"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_mopgc"]
+font_size = 40
+
+[node name="Game" type="Node2D" unique_id=1940250587]
+
+[node name="Player" parent="." unique_id=1798227887 node_paths=PackedStringArray("camera", "fuel_label", "hp_label") instance=ExtResource("1_6igcf")]
+camera = NodePath("../Camera2D")
+fuel_label = NodePath("../CanvasLayer/Label")
+hp_label = NodePath("../CanvasLayer/Label2")
+
+[node name="ColorRect" type="ColorRect" parent="." unique_id=142869882]
+visible = false
+z_index = -2
+offset_left = -890.0
+offset_top = -801.0
+offset_right = 862.0
+offset_bottom = 951.0
+color = Color(0.99999994, 0.10750631, 0.013670866, 1)
+
+[node name="LevelGenerator" type="Node2D" parent="." unique_id=73675928]
+
+[node name="Chunk" parent="." unique_id=562283220 instance=ExtResource("2_u6khg")]
+position = Vector2(-250, 0)
+script = ExtResource("3_ou18a")
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=1424989398]
+position = Vector2(600, 0)
+zoom = Vector2(0.5, 0.5)
+
+[node name="TouchControls" parent="." unique_id=141027083 instance=ExtResource("4_mopgc")]
+z_index = 5
+position = Vector2(-300, 0)
+
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=1453214371]
+layer = 13
+
+[node name="Label" type="Label" parent="CanvasLayer" unique_id=247038873]
+offset_left = 1014.0
+offset_top = 35.0
+offset_right = 1249.0
+offset_bottom = 111.0
+text = "Fuel: 100"
+label_settings = SubResource("LabelSettings_mopgc")
+
+[node name="Label2" type="Label" parent="CanvasLayer" unique_id=891246137]
+offset_left = 1014.0
+offset_top = 109.0
+offset_right = 1249.0
+offset_bottom = 185.0
+text = "Lives: 3"
+label_settings = SubResource("LabelSettings_mopgc")

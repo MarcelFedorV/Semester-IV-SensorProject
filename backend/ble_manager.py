@@ -34,6 +34,23 @@ CSC_LOCATIONS = {
     13:"Rear Hub", 14:"Chest", 15:"Spider", 16:"Chain Ring",
 }
 
+# ── CSC parser ────────────────────────────────────────────────────────────────
+
+def parse_csc(data: bytes) -> dict:
+    result = {}
+    flags  = data[0]
+    idx    = 1
+    if flags & 0x01:
+        if len(data) >= idx + 6:
+            result["wheel_revs"]       = int.from_bytes(data[idx:idx+4], "little")
+            result["wheel_event_time"] = int.from_bytes(data[idx+4:idx+6], "little")
+            idx += 6
+    if flags & 0x02:
+        if len(data) >= idx + 4:
+            result["crank_revs"]       = int.from_bytes(data[idx:idx+2], "little")
+            result["crank_event_time"] = int.from_bytes(data[idx+2:idx+4], "little")
+    return result
+
 # ── XOSS switch helpers ───────────────────────────────────────────────────────
 
 def make_cmd(v: int) -> bytes:
@@ -60,15 +77,12 @@ async def xoss_to_cadence(client: BleakClient, rebooted: asyncio.Event, progress
             ticks.append(data[1])
     try: await client.start_notify(NUS_UNK, on_tick)
     except Exception: pass
-
     await client.write_gatt_char(NUS_UNK, make_cmd(0x01), response=False)
     await asyncio.sleep(0.5)
     counter = ticks[-1] if ticks else 0x01
-
     jump = (0x24 - counter) & 0xFF
     if progress_cb: progress_cb(f"Jumping to cadence threshold (+0x{jump:02X})")
     await client.write_gatt_char(NUS_UNK, make_cmd(jump), response=False)
-
     try: await asyncio.wait_for(rebooted.wait(), timeout=6.0)
     except asyncio.TimeoutError: pass
     return rebooted.is_set()
@@ -79,13 +93,10 @@ async def xoss_to_speed(client: BleakClient, rebooted: asyncio.Event, progress_c
         data = bytes(d)
         if len(data) >= 3 and data[0] == 0x31 and data[2] == (0x31 ^ data[1]):
             all_ticks.append(data[1])
-
     await _set_location(client, 0x04)
     try: await client.start_notify(NUS_UNK, on_tick)
     except Exception: pass
-
     if progress_cb: progress_cb("Sweeping counter to speed threshold…")
-
     for val in range(0x100):
         if rebooted.is_set(): break
         try:
@@ -95,7 +106,6 @@ async def xoss_to_speed(client: BleakClient, rebooted: asyncio.Event, progress_c
         if val % 32 == 0 and progress_cb:
             progress_cb(f"Sweep 0x{val:02X} / 0xFF")
         await asyncio.sleep(0.08)
-
     if not rebooted.is_set():
         try: await asyncio.wait_for(rebooted.wait(), timeout=5.0)
         except asyncio.TimeoutError: pass
@@ -133,6 +143,11 @@ class BLEManager:
         self.client:       Optional[BleakClient] = None
         self.connected_to: Optional[str] = None
 
+        # Sensor movement state — updated on every CSC notification
+        self.is_moving:        bool         = False
+        self._last_wheel_revs: Optional[int] = None
+        self._last_crank_revs: Optional[int] = None
+
         # Hooks
         self.on_device_updated:       Callable[[dict], None] = lambda d: None
         self.on_device_removed:       Callable[[str],  None] = lambda a: None
@@ -144,6 +159,8 @@ class BLEManager:
         self.on_interrogation_result: Callable[[dict], None] = lambda r: None
         self.on_switch_progress:      Callable[[str],  None] = lambda m: None
         self.on_switch_done:          Callable[[dict], None] = lambda r: None
+        # Fires on every CSC packet: {"moving": 1.0|0.0, "wheel_revs": int|None, "crank_revs": int|None}
+        self.on_sensor_data:          Callable[[dict], None] = lambda d: None
 
     # ── Scanning ──────────────────────────────────────────────────────────────
 
@@ -225,6 +242,49 @@ class BLEManager:
             self.on_device_removed(a)
         print("[BLE] Device list cleared.")
 
+    # ── CSC continuous reading ────────────────────────────────────────────────
+
+    def _handle_csc(self, data: bytes):
+        """Parse CSC packet, update is_moving, fire on_sensor_data."""
+        parsed = parse_csc(data)
+        moved  = False
+
+        if "wheel_revs" in parsed:
+            revs = parsed["wheel_revs"]
+            if self._last_wheel_revs is not None and revs != self._last_wheel_revs:
+                moved = True
+            self._last_wheel_revs = revs
+
+        if "crank_revs" in parsed:
+            revs = parsed["crank_revs"]
+            if self._last_crank_revs is not None and revs != self._last_crank_revs:
+                moved = True
+            self._last_crank_revs = revs
+
+        self.is_moving = moved
+        self.on_sensor_data({
+            "moving":     1.0 if moved else 0.0,
+            "wheel_revs": parsed.get("wheel_revs"),
+            "crank_revs": parsed.get("crank_revs"),
+        })
+
+    async def start_csc_notify(self):
+        """Start continuous CSC notifications on the connected client."""
+        if not self.is_connected:
+            return
+        def on_csc(s, d):
+            self._handle_csc(bytes(d))
+        try:
+            await self.client.start_notify(CSC_MEASUREMENT, on_csc)
+            print("[BLE] CSC notifications started.")
+        except Exception as e:
+            print(f"[BLE] Could not start CSC notify: {e}")
+
+    def _reset_csc(self):
+        self._last_wheel_revs = None
+        self._last_crank_revs = None
+        self.is_moving        = False
+
     # ── Connection + interrogation ────────────────────────────────────────────
 
     async def connect_and_interrogate(self, address: str):
@@ -238,6 +298,7 @@ class BLEManager:
         def _on_disconnect(_=None):
             self.connected_to = None
             self.client       = None
+            self._reset_csc()
             self.on_disconnected(address)
             print(f"[BLE] Disconnected from {address}")
 
@@ -299,10 +360,10 @@ class BLEManager:
                 mode = "cadence"
             else:
                 got = asyncio.Event(); csc_data = []
-                def on_csc(s, d):
+                def on_csc_once(s, d):
                     if not csc_data: csc_data.append(bytes(d)); got.set()
                 try:
-                    await self.client.start_notify(CSC_MEASUREMENT, on_csc)
+                    await self.client.start_notify(CSC_MEASUREMENT, on_csc_once)
                     try: await asyncio.wait_for(got.wait(), timeout=3.0)
                     except asyncio.TimeoutError: pass
                     await self.client.stop_notify(CSC_MEASUREMENT)
@@ -325,6 +386,9 @@ class BLEManager:
             })
             print(f"[BLE] Accepted: {name} | mode={mode} | xoss={is_xoss}")
 
+            # Start continuous CSC reading after interrogation
+            await self.start_csc_notify()
+
         except Exception as e:
             msg = f"Connect failed: {e}"
             print(f"[BLE] {msg}")
@@ -336,6 +400,7 @@ class BLEManager:
             try: await self.client.disconnect()
             except Exception: pass
         self.client = self.connected_to = None
+        self._reset_csc()
 
     @property
     def is_connected(self) -> bool:
@@ -360,7 +425,6 @@ class BLEManager:
         rebooted = asyncio.Event()
 
         try:
-            # Pass rebooted event via disconnect callback in constructor
             client = BleakClient(
                 address, timeout=10.0,
                 disconnected_callback=lambda _=None: rebooted.set()
@@ -385,7 +449,6 @@ class BLEManager:
             self.on_switch_done({"success": False, "error": "Sensor did not reboot"})
             return
 
-        # Remove old address — it no longer exists after the reboot
         if address in self.devices:
             del self.devices[address]
             self.on_device_removed(address)
@@ -403,4 +466,5 @@ class BLEManager:
             "connected":    self.is_connected,
             "connected_to": self.connected_to,
             "device_count": len(self.devices),
+            "is_moving":    self.is_moving,
         }
