@@ -25,8 +25,11 @@ const TAP_PULSE = 0.5
 @onready var game_state   = $GameState
 @onready var fisher       = $Fisher
 @onready var fish_manager = $FishManager
+@onready var fish_on_label = $UI/FishOnLabel
 
 var is_touching = false
+var fish_on_timer = 0.0
+const FISH_ON_DURATION = 2.0
 
 func _ready():
 	await get_tree().process_frame
@@ -46,6 +49,7 @@ func _ready():
 	catch_reveal.dismissed.connect(_on_catch_dismissed)
 	game_state.fish_caught.connect(_on_fish_caught)
 	game_state.state_changed.connect(_on_state_changed)
+	http.request_completed.connect(_on_catch_response)
 
 	status_label.text = "Press arrow keys to move"
 	
@@ -72,6 +76,12 @@ func _process(delta):
 		notification_label.modulate.a = notification_timer / NOTIFICATION_DURATION
 		if notification_timer <= 0.0:
 			notification_label.visible = false
+			
+	if fish_on_timer > 0.0:
+		fish_on_timer -= delta
+		fish_on_label.modulate.a = fish_on_timer / FISH_ON_DURATION
+		if fish_on_timer <= 0.0:
+			fish_on_label.visible = false
 
 func _get_is_moving() -> bool:
 	return (
@@ -121,7 +131,6 @@ func _on_fish_caught():
 		[],
 		HTTPClient.METHOD_POST
 	)
-	http.request_completed.connect(_on_catch_response)
 
 func _on_catch_response(_result, response_code, _headers, body):
 	http.request_completed.disconnect(_on_catch_response)
@@ -134,8 +143,11 @@ func _on_catch_response(_result, response_code, _headers, body):
 	var data = json.get_data()
 	var fish = data["fish"]
 
-	catch_reveal.show_catch(fish["name"], fish["rarity"], fish["fact"])
-	_show_notification("%s added to collection!" % fish["name"])
+	var sprite = fish.get("sprite", "")
+	if sprite == null:
+		sprite = ""
+	catch_reveal.show_catch(fish["name"], fish["rarity"], fish["fact"], sprite)
+	_show_notification("🐟 %s added to collection!" % fish["name"])
 
 func _show_notification(text: String):
 	notification_label.text    = text
@@ -149,7 +161,7 @@ func _on_catch_dismissed():
 
 func _on_state_changed(new_state):
 	if new_state == GameState.State.REELING:
-		status_label.text = "Fish on! Keep moving to reel it in!"
+		_show_fish_on()
 
 func _input(event):
 	if event is InputEventScreenTouch:
@@ -175,3 +187,8 @@ func _notification(what):
 		var vp   = get_viewport().get_visible_rect().size
 		screen_w = vp.x
 		screen_h = vp.y
+		
+func _show_fish_on():
+	fish_on_label.visible = true
+	fish_on_label.modulate.a = 1.0
+	fish_on_timer = FISH_ON_DURATION
