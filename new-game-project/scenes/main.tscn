@@ -35,8 +35,7 @@ grow_vertical = 2
 color = Color(0.16047382, 0.19730252, 0.7650473, 1)
 
 [node name="Line" type="Line2D" parent="." unique_id=1364468247]
-position = Vector2(362, 210)
-points = PackedVector2Array(195, 100, 195, 300)
+points = PackedVector2Array(195, 100, 195, 100)
 width = 2.0
 
 [node name="Bobber" type="ColorRect" parent="." unique_id=264317558]
