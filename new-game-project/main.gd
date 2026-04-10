@@ -125,12 +125,18 @@ func _update_status_label():
 			pass
 
 func _on_fish_caught():
+	# Disconnect first if already connected to avoid stacking
+	if http.request_completed.is_connected(_on_catch_response):
+		http.request_completed.disconnect(_on_catch_response)
+	
 	var depth = game_state.depth
+	http.timeout = 5.0
 	http.request(
 		BASE_URL + "/fish/catch?depth=%.2f&patient_id=1" % depth,
 		[],
 		HTTPClient.METHOD_POST
 	)
+	http.request_completed.connect(_on_catch_response)
 
 func _on_catch_response(_result, response_code, _headers, body):
 	http.request_completed.disconnect(_on_catch_response)
