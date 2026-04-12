@@ -18,7 +18,7 @@ FISH = [
         "depth": "surface",
         "fact": "Travels in massive schools of thousands.",
         "color": "#89CFF0",
-        "sprite": "codfish.png",
+        "sprite": "Herring.png",
     },
     {
         "id": 3,
@@ -76,7 +76,7 @@ FISH = [
         "depth": "deep",
         "fact": "Can swim at speeds of up to 97 km/h.",
         "color": "#4169E1",
-        "sprite": "dragonfish.png",
+        "sprite": "swordfish.png",
     },
     {
         "id": 9,
@@ -94,9 +94,9 @@ FISH = [
         "name": "Dragonfish",
         "rarity": "Legendary",
         "depth": "deep",
-        "fact": "A deep sea predator that produces its own light.",
+        "fact": "A deep sea predator.",
         "color": "#FF4500",
-        "sprite": "dragonfish.png",
+        "sprite": "Mythical.png",
     },
     {
         "id": 11,

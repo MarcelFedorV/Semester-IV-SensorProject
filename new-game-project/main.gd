@@ -24,6 +24,7 @@ const TAP_PULSE = 0.5
 @onready var http = $HTTPRequest
 @onready var game_state   = $GameState
 @onready var fisher       = $Fisher
+@onready var boat = $Boat
 @onready var fish_manager = $FishManager
 @onready var fish_on_label = $UI/FishOnLabel
 
@@ -37,13 +38,16 @@ func _ready():
 	screen_w = vp.x
 	screen_h = vp.y
 	collection_button.pressed.connect(_on_collection_pressed)
-
+	
+	_setup_boat()
 	_setup_background()
 	fisher.setup(screen_w, screen_h, DOCK_Y_PCT, CENTER_X_PCT)
 	fish_manager.setup(screen_w, screen_h)
 
 	fishing_line.set_point_position(0, Vector2(screen_w * CENTER_X_PCT, screen_h * DOCK_Y_PCT))
 	fishing_line.set_point_position(1, Vector2(screen_w * CENTER_X_PCT, screen_h * DOCK_Y_PCT + 10))
+	fishing_line.width = 1.5
+	fishing_line.default_color = Color(0.9, 0.85, 0.7, 0.8)  # slight yellowish transparent
 
 	catch_reveal.visible = false
 	catch_reveal.dismissed.connect(_on_catch_dismissed)
@@ -57,13 +61,13 @@ func _on_collection_pressed():
 	get_tree().change_scene_to_file("res://scenes/collection.tscn")
 
 func _setup_background():
-	$Background.position = Vector2(0, 0)
-	$Background.size     = Vector2(screen_w, screen_h)
-	$Background.color    = Color(0.868, 0.88, 0.955, 1.0)
+	$Background.size     = Vector2(screen_w, screen_h * DOCK_Y_PCT)
+	$Background.position = Vector2.ZERO
 
 	var water_y = screen_h * DOCK_Y_PCT
 	water.position = Vector2(0, water_y)
 	water.size     = Vector2(screen_w, screen_h - water_y)
+	bobber.size = Vector2(40, 40)  # adjust based on how big you want it
 
 func _process(delta):
 	game_state.is_moving = _get_is_moving()
@@ -198,3 +202,14 @@ func _show_fish_on():
 	fish_on_label.visible = true
 	fish_on_label.modulate.a = 1.0
 	fish_on_timer = FISH_ON_DURATION
+	
+	
+func _setup_boat():
+	var dock_y = screen_h * DOCK_Y_PCT
+	var boat_w = screen_w * 0.6
+	var boat_h = boat_w * 0.5  # adjust based on image ratio
+	boat.size = Vector2(boat_w, boat_h)
+	boat.position = Vector2(
+		screen_w * CENTER_X_PCT - boat_w / 2,
+		dock_y - boat_h * 0.6  # sits on waterline
+	)

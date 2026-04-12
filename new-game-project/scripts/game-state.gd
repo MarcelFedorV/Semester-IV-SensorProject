@@ -3,7 +3,7 @@ extends Node
 
 enum State { FISHING, REELING, REVEALING }
 
-const CATCH_INTERVAL = 10.0
+var catch_interval = 15.0 
 const REEL_SPEED     = 0.3
 const REEL_DECAY     = 0.15
 
@@ -24,7 +24,7 @@ func update(delta: float):
 
 			if is_moving:
 				catch_timer += delta
-				if catch_timer >= CATCH_INTERVAL:
+				if catch_timer >= catch_interval:
 					catch_timer = 0.0
 					_set_state(State.REELING)
 					reel_progress = 0.0
@@ -48,6 +48,7 @@ func reset():
 	reel_progress = 0.0
 	catch_timer   = 0.0
 	_set_state(State.FISHING)
+	catch_interval = randf_range(15.0, 30.0)
 
 func get_visual_depth() -> float:
 	match state:
@@ -57,4 +58,6 @@ func get_visual_depth() -> float:
 
 func _set_state(new_state):
 	state = new_state
+	if new_state == State.FISHING:
+		catch_interval = randf_range(15.0, 30.0)
 	state_changed.emit(new_state)
