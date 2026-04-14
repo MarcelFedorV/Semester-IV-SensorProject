@@ -77,6 +77,10 @@ async def serve_welcome():
 async def serve_ble():
     return FileResponse("index.html")
 
+@app.get("/developers")
+async def serve_dev():
+    return FileResponse("pages/developers.html")
+
 @app.get("/Start")
 def landing():
     return FileResponse("Start.html")

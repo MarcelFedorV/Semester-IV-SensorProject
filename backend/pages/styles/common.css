@@ -89,6 +89,11 @@ header {
     gap: 12px;
 }
 
+.logo-link {
+    text-decoration: none;
+    color: inherit;
+}
+
 .logo-icon {
     width: 32px;
     height: 32px;
@@ -268,7 +273,6 @@ header {
 }
 
 .divider::after {
-    content: 'OR';
     position: absolute;
     top: 50%;
     left: 50%;
