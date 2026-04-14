@@ -50,6 +50,7 @@ manager.on_error                = lambda m: asyncio.create_task(broadcast({"type
 manager.on_interrogation_result = lambda r: asyncio.create_task(broadcast({"type": "interrogation_result", "result":  r}))
 manager.on_switch_progress      = lambda m: asyncio.create_task(broadcast({"type": "switch_progress",       "message": m}))
 manager.on_switch_done          = lambda r: asyncio.create_task(broadcast({"type": "switch_done",           "result":  r}))
+manager.on_sensor_state = lambda active: asyncio.create_task(broadcast({"type": "sensor_state",          "active": active}))
 
 
 @asynccontextmanager
@@ -179,8 +180,12 @@ async def get_collection(patient_id: int):
         ]
     }
 
-if os.path.exists("games/FishingGame/index.html"):
-    app.mount("/FishingGame", StaticFiles(directory="games/FishingGame", html=True), name="fishing")
+#if os.path.exists("games/FishingGame/index.html"):
+    #app.mount("/FishingGame", StaticFiles(directory="games/FishingGame", html=True), name="fishing")
+
+
+if os.path.exists("../new-game-project/index.html"):
+    app.mount("/FishingGame", StaticFiles(directory="../new-game-project", html=True), name="fishing")
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=False)

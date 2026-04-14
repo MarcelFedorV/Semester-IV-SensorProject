@@ -144,6 +144,7 @@ class BLEManager:
         self.on_interrogation_result: Callable[[dict], None] = lambda r: None
         self.on_switch_progress:      Callable[[str],  None] = lambda m: None
         self.on_switch_done:          Callable[[dict], None] = lambda r: None
+        self.on_sensor_state:         Callable[[bool], None] = lambda active: None
 
     # ── Scanning ──────────────────────────────────────────────────────────────
 
@@ -314,6 +315,7 @@ class BLEManager:
 
             is_xoss = "XOSS" in name.upper() or "ARENA" in name.upper()
             self.on_connected(address)
+            asyncio.create_task(self._monitor_csc(self.client))
             self.on_interrogation_result({
                 "accepted": True,
                 "address":  address,
@@ -360,7 +362,6 @@ class BLEManager:
         rebooted = asyncio.Event()
 
         try:
-            # Pass rebooted event via disconnect callback in constructor
             client = BleakClient(
                 address, timeout=10.0,
                 disconnected_callback=lambda _=None: rebooted.set()
@@ -385,7 +386,6 @@ class BLEManager:
             self.on_switch_done({"success": False, "error": "Sensor did not reboot"})
             return
 
-        # Remove old address — it no longer exists after the reboot
         if address in self.devices:
             del self.devices[address]
             self.on_device_removed(address)
@@ -404,3 +404,53 @@ class BLEManager:
             "connected_to": self.connected_to,
             "device_count": len(self.devices),
         }
+
+    # ── CSC monitor ───────────────────────────────────────────────────────────
+
+    async def _monitor_csc(self, client: BleakClient):
+        """
+        Subscribes to CSC measurement and reports motion by comparing
+        cumulative revolution counters. If the counter hasn't changed
+        in STOP_TIMEOUT seconds, the sensor is not moving.
+        Works for both wheel (flag bit 0) and crank (flag bit 1) sensors.
+        """
+        STOP_TIMEOUT = 2.0  # seconds of no counter change = stopped
+
+        last_wheel_revs  = None
+        last_crank_revs  = None
+        last_change_time = asyncio.get_event_loop().time()
+
+        def on_csc(sender, data):
+            nonlocal last_wheel_revs, last_crank_revs, last_change_time
+            b     = bytes(data)
+            flags = b[0]
+            changed = False
+
+            # Wheel revolution data: bytes 1-4 (present if bit 0 set)
+            if flags & 0x01 and len(b) >= 5:
+                wheel_revs = int.from_bytes(b[1:5], "little")
+                if last_wheel_revs is None or wheel_revs != last_wheel_revs:
+                    last_wheel_revs  = wheel_revs
+                    changed = True
+
+            # Crank revolution data: bytes 5-6 (present if bit 1 set)
+            if flags & 0x02 and len(b) >= 7:
+                crank_revs = int.from_bytes(b[5:7], "little")
+                if last_crank_revs is None or crank_revs != last_crank_revs:
+                    last_crank_revs  = crank_revs
+                    changed = True
+
+            if changed:
+                last_change_time = asyncio.get_event_loop().time()
+
+        try:
+            await client.start_notify(CSC_MEASUREMENT, on_csc)
+            while client.is_connected:
+                await asyncio.sleep(0.5)
+                elapsed = asyncio.get_event_loop().time() - last_change_time
+                self.on_sensor_state(elapsed < STOP_TIMEOUT)
+            await client.stop_notify(CSC_MEASUREMENT)
+        except Exception as e:
+            print(f"[CSC monitor] stopped: {e}")
+        finally:
+            self.on_sensor_state(False)

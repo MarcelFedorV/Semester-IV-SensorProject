@@ -51,8 +51,8 @@ func _ready():
 	game_state.state_changed.connect(_on_state_changed)
 	http.request_completed.connect(_on_catch_response)
 
-	status_label.text = "Press arrow keys to move"
-	
+	status_label.text = "Tap or pedal to fish"
+
 func _on_collection_pressed():
 	get_tree().change_scene_to_file("res://scenes/collection.tscn")
 
@@ -76,7 +76,7 @@ func _process(delta):
 		notification_label.modulate.a = notification_timer / NOTIFICATION_DURATION
 		if notification_timer <= 0.0:
 			notification_label.visible = false
-			
+
 	if fish_on_timer > 0.0:
 		fish_on_timer -= delta
 		fish_on_label.modulate.a = fish_on_timer / FISH_ON_DURATION
@@ -89,7 +89,8 @@ func _get_is_moving() -> bool:
 		Input.is_action_pressed("ui_down")  or
 		Input.is_action_pressed("ui_left")  or
 		Input.is_action_pressed("ui_right") or
-		is_touching
+		is_touching                          or
+		game_state.sensor_active
 	)
 
 func _update_visuals():
@@ -118,7 +119,10 @@ func _update_visuals():
 func _update_status_label():
 	match game_state.state:
 		GameState.State.FISHING:
-			status_label.text = "Moving - line going deeper" if game_state.is_moving else "Stop - line rising"
+			if game_state.sensor_active:
+				status_label.text = "Pedalling - line going deeper" if game_state.is_moving else "Stop pedalling - line rising"
+			else:
+				status_label.text = "Moving - line going deeper" if game_state.is_moving else "Tap or pedal to fish"
 		GameState.State.REELING:
 			status_label.text = "Reeling... %.0f%%" % (game_state.reel_progress * 100)
 		GameState.State.REVEALING:
@@ -157,7 +161,7 @@ func _show_notification(text: String):
 
 func _on_catch_dismissed():
 	game_state.reset()
-	status_label.text = "Press arrow keys to move"
+	status_label.text = "Tap or pedal to fish"
 
 func _on_state_changed(new_state):
 	if new_state == GameState.State.REELING:
@@ -165,7 +169,6 @@ func _on_state_changed(new_state):
 
 func _input(event):
 	if event is InputEventScreenTouch:
-		# don't trigger fishing if touch is on a Control node (like a button)
 		if event.pressed:
 			var clicked = get_viewport().gui_get_focus_owner()
 			if clicked == null:
@@ -187,7 +190,7 @@ func _notification(what):
 		var vp   = get_viewport().get_visible_rect().size
 		screen_w = vp.x
 		screen_h = vp.y
-		
+
 func _show_fish_on():
 	fish_on_label.visible = true
 	fish_on_label.modulate.a = 1.0
