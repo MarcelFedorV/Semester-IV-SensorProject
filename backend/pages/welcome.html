@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome</title>
+    <link rel="stylesheet" href="/style/common.css">
+</head>
+
+<body>
+
+    <div class="grid-bg"></div>
+    <div class="glow"></div>
+
+    <header>
+        <div class="logo">
+            <div class="logo-icon"></div>
+            <div>
+                <div class="logo-text">SensorProject</div>
+                <div class="logo-sub">Semester IV · Group 11</div>
+            </div>
+        </div>
+        <div class="header-right">
+            <span class="status-dot"></span>
+            system online
+        </div>
+    </header>
+
+    <div class="main">
+        <div class="card">
+
+            <div class="card-header">
+                <div class="card-eyebrow">Welcome</div>
+                <div class="card-title">Patient Portal</div>
+                <div class="card-sub">Sign in to your account or register as a new patient to begin.</div>
+            </div>
+
+            <!-- Tab switcher -->
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('login')">Login</button>
+                <button class="tab" onclick="switchTab('register')">Register</button>
+            </div>
+
+            <!-- Login panel -->
+            <div class="tab-panel active" id="panel-login">
+                <div class="input-group">
+                    <label class="input-label">Patient ID</label>
+                    <input type="text" placeholder="e.g. 00142" id="login-id">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Password</label>
+                    <input type="password" placeholder="••••••••" id="login-pw">
+                </div>
+                <button class="btn btn-primary" onclick="handleLogin()">▶ Sign In</button>
+            </div>
+
+            <!-- Register panel -->
+            <div class="tab-panel" id="panel-register">
+                <div class="input-group">
+                    <label class="input-label">Full Name</label>
+                    <input type="text" placeholder="Your name" id="reg-name">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Password</label>
+                    <input type="password" placeholder="Choose a password" id="reg-pw">
+                </div>
+                <button class="btn btn-primary" onclick="handleRegister()">▶ Create Account</button>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="section-label">Staff Access</div>
+            <a href="/ble" class="btn btn-secondary">BLE Scanner</a>
+
+        </div>
+    </div>
+
+    <footer>
+        SEMESTER-IV-SENSORPROJECT &nbsp;·&nbsp; Property of Group 11
+    </footer>
+
+    <script>
+        function switchTab(name) {
+            document.querySelectorAll('.tab').forEach((t, i) => {
+                t.classList.toggle('active', ['login', 'register'][i] === name);
+            });
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.getElementById(`panel-${name}`).classList.add('active');
+        }
+
+        function handleLogin() {
+            const id = document.getElementById('login-id').value.trim();
+            if (!id) return;
+            // TODO: real auth — for now just redirect
+            window.location.href = '/home';
+        }
+
+        function handleRegister() {
+            const name = document.getElementById('reg-name').value.trim();
+            if (!name) return;
+            // TODO: real registration
+            window.location.href = '/home';
+        }
+    </script>
+
+</body>
+
+</html>

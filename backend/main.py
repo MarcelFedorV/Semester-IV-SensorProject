@@ -12,15 +12,14 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.gzip import GZipMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 import uvicorn
 from fish_logic import pick_fish
 from fish_data import FISH_BY_ID, FISH
+
 from ble_manager import BLEManager
 
 app = FastAPI()
-app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 
 if sys.platform == "win32":
@@ -71,7 +70,11 @@ app.add_middleware(SecurityHeadersMiddleware)
 
 
 @app.get("/")
-async def serve_frontend():
+async def serve_welcome():
+    return FileResponse("pages/welcome.html")
+
+@app.get("/ble")
+async def serve_ble():
     return FileResponse("index.html")
 
 @app.get("/Start")
@@ -154,17 +157,15 @@ caught_collection = {}
 async def catch_fish(depth: float, patient_id: int = 1):
     """Called by Godot when a fish is caught."""
     fish = pick_fish(depth)
-
-    # Check before adding so we can report if it's truly new
-    already_caught = patient_id in caught_collection and fish["id"] in caught_collection[patient_id]
-
+    
+    # Add to collection
     if patient_id not in caught_collection:
         caught_collection[patient_id] = set()
     caught_collection[patient_id].add(fish["id"])
-
+    
     return {
         "fish": fish,
-        "new": not already_caught,
+        "new": fish["id"] not in caught_collection.get(patient_id, set())
     }
 
 @app.get("/fish/collection/{patient_id}")
@@ -181,6 +182,8 @@ async def get_collection(patient_id: int):
 
 if os.path.exists("games/FishingGame/index.html"):
     app.mount("/FishingGame", StaticFiles(directory="games/FishingGame", html=True), name="fishing")
+
+app.mount("/style", StaticFiles(directory="pages/styles"), name="style")
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=False)
