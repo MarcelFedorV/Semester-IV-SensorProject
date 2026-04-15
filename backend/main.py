@@ -81,6 +81,14 @@ async def serve_ble():
 async def serve_dev():
     return FileResponse("pages/developers.html")
 
+@app.get("/frontpage")
+async def serve_dev():
+    return FileResponse("pages/frontpage.html")
+
+@app.get("/metrics")
+async def serve_dev():
+    return FileResponse("pages/metrics.html")
+
 @app.get("/Start")
 def landing():
     return FileResponse("Start.html")
