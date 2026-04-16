@@ -5,3 +5,20 @@ To install:
 -websockets
 
 just run the main file
+
+
+
+>> Run Docker compose:
+
+docker-compose up --build
+
+
+
+>> Run backend container only:
+
+cd backend
+docker build -f backend.Dockerfile -t backend-app .
+docker run -d --name backend -p 8000:8000 backend-app
+
+
+Delete images after use!! (still sth to fix)
