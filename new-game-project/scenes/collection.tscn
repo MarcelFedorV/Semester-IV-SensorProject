@@ -24,12 +24,12 @@ layout_mode = 0
 offset_right = 40.0
 offset_bottom = 23.0
 
-[node name="ScrollContainer" type="ScrollContainer" parent="." unique_id=1614742074]
+[node name="ScrollContainer" type="ScrollContainer" parent="." unique_id=1987417580]
 layout_mode = 0
 offset_right = 40.0
 offset_bottom = 40.0
 
-[node name="Grid" type="GridContainer" parent="ScrollContainer" unique_id=551966072]
+[node name="VBox" type="GridContainer" parent="ScrollContainer" unique_id=551966072]
 layout_mode = 2
 
 [node name="HTTPRequest" type="HTTPRequest" parent="." unique_id=1275414653]

@@ -24,9 +24,13 @@ const TAP_PULSE = 0.5
 @onready var http = $HTTPRequest
 @onready var game_state   = $GameState
 @onready var fisher       = $Fisher
+@onready var boat = $Boat
 @onready var fish_manager = $FishManager
+@onready var fish_on_label = $UI/FishOnLabel
 
 var is_touching = false
+var fish_on_timer = 0.0
+const FISH_ON_DURATION = 2.0
 
 func _ready():
 	await get_tree().process_frame
@@ -34,18 +38,23 @@ func _ready():
 	screen_w = vp.x
 	screen_h = vp.y
 	collection_button.pressed.connect(_on_collection_pressed)
-
+	
+	_setup_boat()
 	_setup_background()
+	_setup_ui_theme()
 	fisher.setup(screen_w, screen_h, DOCK_Y_PCT, CENTER_X_PCT)
 	fish_manager.setup(screen_w, screen_h)
 
 	fishing_line.set_point_position(0, Vector2(screen_w * CENTER_X_PCT, screen_h * DOCK_Y_PCT))
 	fishing_line.set_point_position(1, Vector2(screen_w * CENTER_X_PCT, screen_h * DOCK_Y_PCT + 10))
+	fishing_line.width = 1.5
+	fishing_line.default_color = Color(0.9, 0.85, 0.7, 0.8)  # slight yellowish transparent
 
 	catch_reveal.visible = false
 	catch_reveal.dismissed.connect(_on_catch_dismissed)
 	game_state.fish_caught.connect(_on_fish_caught)
 	game_state.state_changed.connect(_on_state_changed)
+	http.request_completed.connect(_on_catch_response)
 
 	status_label.text = "Press arrow keys to move"
 	
@@ -53,13 +62,13 @@ func _on_collection_pressed():
 	get_tree().change_scene_to_file("res://scenes/collection.tscn")
 
 func _setup_background():
-	$Background.position = Vector2(0, 0)
-	$Background.size     = Vector2(screen_w, screen_h)
-	$Background.color    = Color(0.868, 0.88, 0.955, 1.0)
+	$Background.size     = Vector2(screen_w, screen_h * DOCK_Y_PCT)
+	$Background.position = Vector2.ZERO
 
 	var water_y = screen_h * DOCK_Y_PCT
 	water.position = Vector2(0, water_y)
 	water.size     = Vector2(screen_w, screen_h - water_y)
+	bobber.size = Vector2(40, 40)  # adjust based on how big you want it
 
 func _process(delta):
 	game_state.is_moving = _get_is_moving()
@@ -72,6 +81,12 @@ func _process(delta):
 		notification_label.modulate.a = notification_timer / NOTIFICATION_DURATION
 		if notification_timer <= 0.0:
 			notification_label.visible = false
+			
+	if fish_on_timer > 0.0:
+		fish_on_timer -= delta
+		fish_on_label.modulate.a = fish_on_timer / FISH_ON_DURATION
+		if fish_on_timer <= 0.0:
+			fish_on_label.visible = false
 
 func _get_is_moving() -> bool:
 	return (
@@ -115,7 +130,12 @@ func _update_status_label():
 			pass
 
 func _on_fish_caught():
+	# Disconnect first if already connected to avoid stacking
+	if http.request_completed.is_connected(_on_catch_response):
+		http.request_completed.disconnect(_on_catch_response)
+	
 	var depth = game_state.depth
+	http.timeout = 5.0
 	http.request(
 		BASE_URL + "/fish/catch?depth=%.2f&patient_id=1" % depth,
 		[],
@@ -134,8 +154,11 @@ func _on_catch_response(_result, response_code, _headers, body):
 	var data = json.get_data()
 	var fish = data["fish"]
 
-	catch_reveal.show_catch(fish["name"], fish["rarity"], fish["fact"])
-	_show_notification("%s added to collection!" % fish["name"])
+	var sprite = fish.get("sprite", "")
+	if sprite == null:
+		sprite = ""
+	catch_reveal.show_catch(fish["name"], fish["rarity"], fish["fact"], sprite)
+	_show_notification("🐟 %s added to collection!" % fish["name"])
 
 func _show_notification(text: String):
 	notification_label.text    = text
@@ -149,7 +172,7 @@ func _on_catch_dismissed():
 
 func _on_state_changed(new_state):
 	if new_state == GameState.State.REELING:
-		status_label.text = "Fish on! Keep moving to reel it in!"
+		_show_fish_on()
 
 func _input(event):
 	if event is InputEventScreenTouch:
@@ -175,3 +198,39 @@ func _notification(what):
 		var vp   = get_viewport().get_visible_rect().size
 		screen_w = vp.x
 		screen_h = vp.y
+		
+func _show_fish_on():
+	fish_on_label.visible = true
+	fish_on_label.modulate.a = 1.0
+	fish_on_timer = FISH_ON_DURATION
+	
+	
+func _setup_boat():
+	var dock_y = screen_h * DOCK_Y_PCT
+	var boat_w = screen_w * 0.6
+	var boat_h = boat_w * 0.5  # adjust based on image ratio
+	boat.size = Vector2(boat_w, boat_h)
+	boat.position = Vector2(
+		screen_w * CENTER_X_PCT - boat_w / 2,
+		dock_y - boat_h * 0.6  # sits on waterline
+	)
+
+
+
+func _setup_ui_theme():
+	var wood_texture = load("res://assets/wood_button.png")
+
+	var style = StyleBoxTexture.new()
+	style.texture = wood_texture
+
+	var style_hover = style.duplicate()
+	style_hover.modulate_color = Color(1.2, 1.1, 1.0)  # slightly brighter on hover
+
+	var style_pressed = style.duplicate()
+	style_pressed.modulate_color = Color(0.8, 0.7, 0.6)  # darker when pressed
+
+	collection_button.add_theme_stylebox_override("normal",  style)
+	collection_button.add_theme_stylebox_override("hover",   style_hover)
+	collection_button.add_theme_stylebox_override("pressed", style_pressed)
+	collection_button.add_theme_color_override("font_color", Color(1.0, 0.95, 0.80))
+	collection_button.add_theme_font_size_override("font_size", 16)
