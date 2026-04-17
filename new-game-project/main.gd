@@ -41,6 +41,7 @@ func _ready():
 	
 	_setup_boat()
 	_setup_background()
+	_setup_ui_theme()
 	fisher.setup(screen_w, screen_h, DOCK_Y_PCT, CENTER_X_PCT)
 	fish_manager.setup(screen_w, screen_h)
 
@@ -213,3 +214,23 @@ func _setup_boat():
 		screen_w * CENTER_X_PCT - boat_w / 2,
 		dock_y - boat_h * 0.6  # sits on waterline
 	)
+
+
+
+func _setup_ui_theme():
+	var wood_texture = load("res://assets/wood_button.png")
+
+	var style = StyleBoxTexture.new()
+	style.texture = wood_texture
+
+	var style_hover = style.duplicate()
+	style_hover.modulate_color = Color(1.2, 1.1, 1.0)  # slightly brighter on hover
+
+	var style_pressed = style.duplicate()
+	style_pressed.modulate_color = Color(0.8, 0.7, 0.6)  # darker when pressed
+
+	collection_button.add_theme_stylebox_override("normal",  style)
+	collection_button.add_theme_stylebox_override("hover",   style_hover)
+	collection_button.add_theme_stylebox_override("pressed", style_pressed)
+	collection_button.add_theme_color_override("font_color", Color(1.0, 0.95, 0.80))
+	collection_button.add_theme_font_size_override("font_size", 16)
