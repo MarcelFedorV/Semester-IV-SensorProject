@@ -4,11 +4,9 @@
 [ext_resource type="Script" uid="uid://dbayv2qrv4hgp" path="res://scripts/fisher.gd" id="2_0wfyh"]
 [ext_resource type="Script" uid="uid://dg6vnt0xdbe4w" path="res://scripts/catch_reveal.gd" id="2_tbgi4"]
 [ext_resource type="Shader" uid="uid://dln53l0dbjugd" path="res://scenes/main.gdshader" id="2_tefeu"]
-[ext_resource type="Texture2D" uid="uid://c4otgls2xurre" path="res://assets/sky.png" id="2_tipki"]
-[ext_resource type="Texture2D" uid="uid://571kxcx3a2sw" path="res://assets/bobber.png" id="4_85g3d"]
 [ext_resource type="Script" uid="uid://dvu4xtx314dxx" path="res://scripts/fish_manager.gd" id="4_tefeu"]
 [ext_resource type="Script" uid="uid://tip82porhkaa" path="res://scripts/game-state.gd" id="5_o6xl0"]
-[ext_resource type="Texture2D" uid="uid://c575xaru6kmln" path="res://assets/boat.png" id="8_tipki"]
+[ext_resource type="Texture2D" uid="uid://beircjsb5x5mu" path="res://assets/fish/boat.png" id="7_o6xl0"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_tefeu"]
 shader = ExtResource("2_tefeu")
@@ -16,14 +14,13 @@ shader = ExtResource("2_tefeu")
 [node name="Main" type="Node2D" unique_id=1390537299]
 script = ExtResource("1_o5qli")
 
-[node name="Background" type="TextureRect" parent="." unique_id=758614285]
+[node name="Background" type="ColorRect" parent="." unique_id=2078241678]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-texture = ExtResource("2_tipki")
-expand_mode = 1
+color = Color(0.005898415, 0.002855174, 0.0017368245, 1)
 
 [node name="WaterSurface" type="ColorRect" parent="." unique_id=895825666]
 material = SubResource("ShaderMaterial_tefeu")
@@ -42,12 +39,10 @@ color = Color(0.16047382, 0.19730252, 0.7650473, 1)
 points = PackedVector2Array(195, 100, 195, 100)
 width = 2.0
 
-[node name="Bobber" type="TextureRect" parent="." unique_id=609490977]
+[node name="Bobber" type="ColorRect" parent="." unique_id=264317558]
 offset_right = 20.0
 offset_bottom = 20.0
-texture = ExtResource("4_85g3d")
-expand_mode = 1
-stretch_mode = 5
+color = Color(0.7215217, 0.15755391, 0.1911807, 1)
 
 [node name="UI" type="CanvasLayer" parent="." unique_id=551231151]
 
@@ -156,6 +151,6 @@ metadata/_custom_type_script = "uid://tip82porhkaa"
 [node name="Boat" type="TextureRect" parent="." unique_id=1415250888]
 offset_right = 40.0
 offset_bottom = 40.0
-texture = ExtResource("8_tipki")
+texture = ExtResource("7_o6xl0")
 expand_mode = 3
 stretch_mode = 5

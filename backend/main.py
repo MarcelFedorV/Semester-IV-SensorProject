@@ -12,14 +12,15 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.gzip import GZipMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 import uvicorn
 from fish_logic import pick_fish
 from fish_data import FISH_BY_ID, FISH
-
 from ble_manager import BLEManager
 
 app = FastAPI()
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 
 if sys.platform == "win32":
@@ -153,15 +154,17 @@ caught_collection = {}
 async def catch_fish(depth: float, patient_id: int = 1):
     """Called by Godot when a fish is caught."""
     fish = pick_fish(depth)
-    
-    # Add to collection
+
+    # Check before adding so we can report if it's truly new
+    already_caught = patient_id in caught_collection and fish["id"] in caught_collection[patient_id]
+
     if patient_id not in caught_collection:
         caught_collection[patient_id] = set()
     caught_collection[patient_id].add(fish["id"])
-    
+
     return {
         "fish": fish,
-        "new": fish["id"] not in caught_collection.get(patient_id, set())
+        "new": not already_caught,
     }
 
 @app.get("/fish/collection/{patient_id}")
