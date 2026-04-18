@@ -12,6 +12,8 @@
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_tefeu"]
 shader = ExtResource("2_tefeu")
+shader_parameter/surface_color = Vector3(0.05, 0.28, 0.52)
+shader_parameter/deep_color = Vector3(0.01, 0.05, 0.12)
 
 [node name="Main" type="Node2D" unique_id=1390537299]
 script = ExtResource("1_o5qli")
@@ -137,6 +139,18 @@ grow_horizontal = 2
 grow_vertical = 2
 text = "FISH ON!"
 
+[node name="LocationLabel" type="Label" parent="UI" unique_id=1933755505]
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="PrevLocation" type="Button" parent="UI" unique_id=914869858]
+offset_right = 8.0
+offset_bottom = 8.0
+
+[node name="NextLocation" type="Button" parent="UI" unique_id=638358448]
+offset_right = 8.0
+offset_bottom = 8.0
+
 [node name="WebSocket" type="Node" parent="." unique_id=1092900758]
 
 [node name="Fisher" type="Node2D" parent="." unique_id=1564531806]
@@ -159,3 +173,5 @@ offset_bottom = 40.0
 texture = ExtResource("8_tipki")
 expand_mode = 3
 stretch_mode = 5
+
+[node name="HTTPRequestLocations" type="HTTPRequest" parent="." unique_id=1408988133]

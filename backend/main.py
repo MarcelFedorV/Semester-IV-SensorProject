@@ -16,7 +16,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 import uvicorn
 from fish_logic import pick_fish
-from fish_data import FISH_BY_ID, FISH
+from fish_data import FISH_BY_ID, FISH, LOCATIONS
 from ble_manager import BLEManager
 
 app = FastAPI()
@@ -151,11 +151,10 @@ async def handle_message(ws: WebSocket, msg: dict):
 caught_collection = {}
 
 @app.post("/fish/catch")
-async def catch_fish(depth: float, patient_id: int = 1):
+async def catch_fish(depth: float, patient_id: int = 1, location_id: int = 1):
     """Called by Godot when a fish is caught."""
-    fish = pick_fish(depth)
+    fish = pick_fish(depth, location_id)
 
-    # Check before adding so we can report if it's truly new
     already_caught = patient_id in caught_collection and fish["id"] in caught_collection[patient_id]
 
     if patient_id not in caught_collection:
@@ -178,6 +177,10 @@ async def get_collection(patient_id: int):
             for f in FISH
         ]
     }
+
+@app.get("/locations")
+async def get_locations():
+    return {"locations": LOCATIONS}
 
 if os.path.exists("games/FishingGame/index.html"):
     app.mount("/FishingGame", StaticFiles(directory="games/FishingGame", html=True), name="fishing")

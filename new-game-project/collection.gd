@@ -136,7 +136,7 @@ func _make_card(fish: Dictionary, caught: bool, w: float, h: float) -> Control:
 		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		name_label.size     = Vector2(w, 24)
 		name_label.position = Vector2(0, h - 26)
-		name_label.add_theme_font_size_override("font_size", 11)
+		name_label.add_theme_font_size_override("font_size", 20)
 		name_label.modulate = Color.BLACK
 		card.add_child(name_label)
 

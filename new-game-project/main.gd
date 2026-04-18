@@ -12,6 +12,9 @@ var notification_timer = 0.0
 const NOTIFICATION_DURATION = 3.0
 var tap_timer   = 0.0
 const TAP_PULSE = 0.5
+var current_location_id = 1
+var locations = []
+var current_location_index = 0
 
 @onready var bobber       = $Bobber
 @onready var fishing_line = $Line
@@ -27,6 +30,10 @@ const TAP_PULSE = 0.5
 @onready var boat = $Boat
 @onready var fish_manager = $FishManager
 @onready var fish_on_label = $UI/FishOnLabel
+@onready var location_label = $UI/LocationLabel
+@onready var prev_button    = $UI/PrevLocation
+@onready var next_button    = $UI/NextLocation
+@onready var http_locations = $HTTPRequestLocations
 
 var is_touching = false
 var fish_on_timer = 0.0
@@ -38,10 +45,13 @@ func _ready():
 	screen_w = vp.x
 	screen_h = vp.y
 	collection_button.pressed.connect(_on_collection_pressed)
-	
+	prev_button.pressed.connect(_on_prev_pressed)
+	next_button.pressed.connect(_on_next_pressed)
+	_fetch_locations()
 	_setup_boat()
 	_setup_background()
 	_setup_ui_theme()
+	_setup_location_ui()
 	fisher.setup(screen_w, screen_h, DOCK_Y_PCT, CENTER_X_PCT)
 	fish_manager.setup(screen_w, screen_h)
 
@@ -137,7 +147,7 @@ func _on_fish_caught():
 	var depth = game_state.depth
 	http.timeout = 5.0
 	http.request(
-		BASE_URL + "/fish/catch?depth=%.2f&patient_id=1" % depth,
+		BASE_URL + "/fish/catch?depth=%.2f&patient_id=1&location_id=%d" % [depth, current_location_id],
 		[],
 		HTTPClient.METHOD_POST
 	)
@@ -217,7 +227,7 @@ func _setup_boat():
 
 
 
-func _setup_ui_theme():
+func _setup_button_style(button : Button):
 	var wood_texture = load("res://assets/wood_button.png")
 
 	var style = StyleBoxTexture.new()
@@ -229,8 +239,91 @@ func _setup_ui_theme():
 	var style_pressed = style.duplicate()
 	style_pressed.modulate_color = Color(0.8, 0.7, 0.6)  # darker when pressed
 
-	collection_button.add_theme_stylebox_override("normal",  style)
-	collection_button.add_theme_stylebox_override("hover",   style_hover)
-	collection_button.add_theme_stylebox_override("pressed", style_pressed)
-	collection_button.add_theme_color_override("font_color", Color(1.0, 0.95, 0.80))
-	collection_button.add_theme_font_size_override("font_size", 16)
+	button.add_theme_stylebox_override("normal",  style)
+	button.add_theme_stylebox_override("hover",   style_hover)
+	button.add_theme_stylebox_override("pressed", style_pressed)
+	button.add_theme_color_override("font_color", Color(1.0, 0.95, 0.80))
+	button.add_theme_font_size_override("font_size", 16)
+	
+func _setup_ui_theme():
+	_setup_button_style(collection_button)
+
+
+
+func _setup_location_ui():
+	var btn_size = Vector2(44, 44)
+	var label_h  = 44.0
+	var y        = 70.0
+
+	# Prev button — left side
+	prev_button.size     = btn_size
+	prev_button.position = Vector2(10, y)
+
+	# Next button — right side
+	next_button.size     = btn_size
+	next_button.position = Vector2(screen_w - btn_size.x - 10, y)
+
+	# Location label — center between buttons
+	location_label.size     = Vector2(screen_w - (btn_size.x * 2) - 40, label_h)
+	location_label.position = Vector2(btn_size.x + 20, y)
+	location_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	location_label.vertical_alignment   = VERTICAL_ALIGNMENT_CENTER
+	location_label.text = "Baltic Sea"
+	
+	# Apply wood style to buttons
+	_setup_button_style(prev_button)
+	_setup_button_style(next_button)
+	
+	# Apply font to label
+	var font = load("res://assets/fonts/Nunito-Bold.ttf")
+	location_label.add_theme_font_override("font", font)
+	location_label.add_theme_color_override("font_color", Color.WHITE)
+	location_label.add_theme_constant_override("outline_size", 4)
+	location_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+	location_label.add_theme_font_size_override("font_size", 20)
+	
+
+
+func _fetch_locations():
+	http_locations.request(BASE_URL + "/locations")
+	http_locations.request_completed.connect(_on_locations_loaded)
+
+func _on_locations_loaded(_result, response_code, _headers, body):
+	if response_code != 200:
+		print("Failed to load locations")
+		return
+	var json = JSON.new()
+	json.parse(body.get_string_from_utf8())
+	var data = json.get_data()
+	locations = data["locations"]
+	_update_location_display()
+
+func _update_location_display():
+	if locations.is_empty():
+		return
+	var loc = locations[current_location_index]
+	current_location_id = loc["id"]
+	location_label.text = loc["name"]
+	
+	# Update water colors from location data
+	var top  = loc["water_top"]
+	var deep = loc["water_deep"]
+	# Store for shader — we'll update water color dynamically
+	_update_water_shader(top, deep)
+
+func _update_water_shader(top: Array, deep: Array):
+	var mat = water.material as ShaderMaterial
+	if mat:
+		mat.set_shader_parameter("surface_color", Vector3(top[0], top[1], top[2]))
+		mat.set_shader_parameter("deep_color",    Vector3(deep[0], deep[1], deep[2]))
+
+func _on_prev_pressed():
+	current_location_index = max(0, current_location_index - 1)
+	_update_location_display()
+
+func _on_next_pressed():
+	current_location_index = min(locations.size() - 1, current_location_index + 1)
+	_update_location_display()
+	
+	
+	
