@@ -8,6 +8,7 @@ import os
 import asyncio
 import json
 import sys
+import random
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, HTMLResponse
@@ -16,7 +17,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 import uvicorn
 from fish_logic import pick_fish
-from fish_data import FISH_BY_ID, FISH, LOCATIONS
+from fish_data import FISH_BY_ID, FISH, LOCATIONS, MYSTERY_FISH_BY_LOCATION, LOCATIONS_BY_ID
 from ble_manager import BLEManager
 
 app = FastAPI()
@@ -149,11 +150,27 @@ async def handle_message(ws: WebSocket, msg: dict):
 # Temporary in-memory storage until DB is set up
 # key: patient_id, value: set of fish ids caught
 caught_collection = {}
+caught_collection[1] = {1, 2, 3, 4,5 ,6, 7, 8, 9, 10, 11}
+
 
 @app.post("/fish/catch")
 async def catch_fish(depth: float, patient_id: int = 1, location_id: int = 1):
-    """Called by Godot when a fish is caught."""
-    fish = pick_fish(depth, location_id)
+    caught = caught_collection.get(patient_id, set())
+    
+    # Check if location complete → mystery fish chance
+    location_fish = [f for f in FISH if f["location_id"] == location_id]
+    location_fish_ids = {f["id"] for f in location_fish}
+    location_complete = location_fish_ids.issubset(caught)
+    
+    if location_complete and random.random() < 0.3:
+        # 30% chance to catch mystery fish when location complete
+        mystery = MYSTERY_FISH_BY_LOCATION.get(location_id)
+        if mystery:
+            fish = mystery
+        else:
+            fish = pick_fish(depth, location_id)
+    else:
+        fish = pick_fish(depth, location_id)
 
     already_caught = patient_id in caught_collection and fish["id"] in caught_collection[patient_id]
 
@@ -164,19 +181,82 @@ async def catch_fish(depth: float, patient_id: int = 1, location_id: int = 1):
     return {
         "fish": fish,
         "new": not already_caught,
+        "location_complete": location_complete,
     }
 
 @app.get("/fish/collection/{patient_id}")
 async def get_collection(patient_id: int):
-    """Returns full fish list with caught/uncaught status."""
     caught = caught_collection.get(patient_id, set())
+    print("Total FISH:", len(FISH))
+    print("First fish:", FISH[0] if FISH else "empty")
+    
+    collection = [
+        {
+            **f, 
+            "caught": f["id"] in caught,
+            "location": LOCATIONS_BY_ID[f["location_id"]]["name"] if f["location_id"] in LOCATIONS_BY_ID else "Unknown"
+        }
+        for f in FISH
+    ]
+    
+    mystery_entries = []
+    for loc_id, mystery in MYSTERY_FISH_BY_LOCATION.items():
+        location_fish = [f for f in FISH if f["location_id"] == loc_id]
+        location_fish_ids = {f["id"] for f in location_fish}
+        location_complete = location_fish_ids.issubset(caught)
+        print("loc_id:", loc_id)
+        print("location_fish_ids:", location_fish_ids)
+        print("caught:", caught)
+        print("location_complete:", location_complete)
+        
+        if location_complete:
+            mystery_entries.append({
+                **mystery,
+                "caught": mystery["id"] in caught,
+                "location": LOCATIONS_BY_ID[loc_id]["name"]
+            })
+        else:
+            mystery_entries.append({
+                "id": mystery["id"],
+                "name": "???",
+                "rarity": "Location Legend",
+                "location_id": loc_id,
+                "location": LOCATIONS_BY_ID[loc_id]["name"],
+                "color": "#333333",
+                "caught": False,
+                "locked": True
+            })
     
     return {
-        "collection": [
-            {**f, "caught": f["id"] in caught}
-            for f in FISH
-        ]
+        "collection": collection,
+        "mystery_fish": mystery_entries
     }
+
+@app.get("/fish/location_complete/{patient_id}/{location_id}")
+async def check_location_complete(patient_id: int, location_id: int):
+    """Check if player caught all normal fish in a location."""
+    caught = caught_collection.get(patient_id, set())
+    
+    # Get all normal fish for this location
+    location_fish = [f for f in FISH if f["location_id"] == location_id]
+    location_fish_ids = {f["id"] for f in location_fish}
+    
+    # Check if all caught
+    all_caught = location_fish_ids.issubset(caught)
+    
+    # Get mystery fish for this location
+    mystery = MYSTERY_FISH_BY_LOCATION.get(location_id)
+    mystery_unlocked = mystery and mystery["id"] in caught
+    
+    return {
+        "complete": all_caught,
+        "total": len(location_fish_ids),
+        "caught": len(location_fish_ids.intersection(caught)),
+        "mystery_unlocked": mystery_unlocked,
+        "mystery_fish": mystery if all_caught else None
+    }
+
+
 
 @app.get("/locations")
 async def get_locations():

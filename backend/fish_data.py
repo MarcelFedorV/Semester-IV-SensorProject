@@ -61,7 +61,7 @@ FISH = [
         "depth": "mid",
         "fact": "An aggressive predator with razor sharp teeth.",
         "color": "#6B8E23",
-        "sprite": "dragonfish.png",
+        "sprite": "pike.png",
         "location_id": 1,
     },
     {
@@ -71,7 +71,7 @@ FISH = [
         "depth": "deep",
         "fact": "Uses its whisker-like barbels to find food.",
         "color": "#808080",
-        "sprite": "dragonfish.png",
+        "sprite": "catfish.png",
         "location_id": 1,
     },
 
@@ -93,7 +93,7 @@ FISH = [
         "depth": "deep",
         "fact": "The world's longest bony fish, up to 11 meters.",
         "color": "#C0C0C0",
-        "sprite": "dragonfish.png",
+        "sprite": "oarfish.png",
         "location_id": 1,
     },
 
@@ -145,7 +145,7 @@ MYSTERY_FISH = [
         "depth": "deep",
         "fact": "A ghostly creature said to haunt the Baltic Sea.",
         "color": "#A0C4FF",
-        "sprite": None,  # add later
+        "sprite": None,  
     },
     {
         "id": 102,
