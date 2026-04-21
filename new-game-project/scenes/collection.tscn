@@ -43,3 +43,5 @@ horizontal_scroll_mode = 0
 
 [node name="TabBar" type="HBoxContainer" parent="TabScroll" unique_id=845801637]
 layout_mode = 2
+
+[node name="HTTPRequestUser" type="HTTPRequest" parent="." unique_id=292365460]

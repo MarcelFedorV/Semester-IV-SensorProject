@@ -175,3 +175,5 @@ expand_mode = 3
 stretch_mode = 5
 
 [node name="HTTPRequestLocations" type="HTTPRequest" parent="." unique_id=1408988133]
+
+[node name="HTTPRequestUser" type="HTTPRequest" parent="." unique_id=294828330]

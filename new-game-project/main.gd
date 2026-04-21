@@ -15,6 +15,7 @@ const TAP_PULSE = 0.5
 var current_location_id = 1
 var locations = []
 var current_location_index = 0
+var patient_id = 1
 
 @onready var bobber       = $Bobber
 @onready var fishing_line = $Line
@@ -34,10 +35,30 @@ var current_location_index = 0
 @onready var prev_button    = $UI/PrevLocation
 @onready var next_button    = $UI/NextLocation
 @onready var http_locations = $HTTPRequestLocations
+@onready var http_user = $HTTPRequestUser
 
 var is_touching = false
 var fish_on_timer = 0.0
 const FISH_ON_DURATION = 2.0
+
+
+func _fetch_user_id():
+	http_user.request(BASE_URL + "/api/me")
+	http_user.request_completed.connect(_on_user_loaded)
+
+func _on_user_loaded(_result, response_code, _headers, body):
+	if response_code != 200:
+		print("Not authenticated — redirecting")
+		# Optional: open login page in browser
+		OS.shell_open(BASE_URL + "/login")
+		return
+	var json = JSON.new()
+	json.parse(body.get_string_from_utf8())
+	var data = json.get_data()
+	patient_id = int(data["id"])
+	print("Logged in as user: ", data["username"], " id: ", patient_id)
+	
+	
 
 func _ready():
 	await get_tree().process_frame
@@ -52,6 +73,7 @@ func _ready():
 	_setup_background()
 	_setup_ui_theme()
 	_setup_location_ui()
+	_fetch_user_id()
 	fisher.setup(screen_w, screen_h, DOCK_Y_PCT, CENTER_X_PCT)
 	fish_manager.setup(screen_w, screen_h)
 
@@ -151,7 +173,7 @@ func _on_fish_caught():
 	var depth = game_state.depth
 	http.timeout = 5.0
 	http.request(
-		BASE_URL + "/fish/catch?depth=%.2f&patient_id=1&location_id=%d" % [depth, current_location_id],
+		BASE_URL + "/fish/catch?depth=%.2f&patient_id=%d&location_id=%d" % [depth, patient_id, current_location_id],
 		[],
 		HTTPClient.METHOD_POST
 	)

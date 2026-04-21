@@ -11,6 +11,7 @@ const BASE_URL = "https://game.sensorproject.org"
 @onready var http        = $HTTPRequest
 @onready var tab_scroll = $TabScroll
 @onready var tab_bar    = $TabScroll/TabBar
+@onready var http_user = $HTTPRequestUser
 
 var patient_id = 1
 var RARITIES   = ["Common", "Uncommon", "Rare", "Legendary"]
@@ -38,6 +39,15 @@ func _ready():
 	_setup_layout()
 	_setup_button_style(back_button)
 	back_button.pressed.connect(_on_back_pressed)
+	http_user.request(BASE_URL + "/api/me")
+	http_user.request_completed.connect(_on_user_loaded)
+
+func _on_user_loaded(_result, response_code, _headers, body):
+	if response_code != 200:
+		return
+	var json = JSON.new()
+	json.parse(body.get_string_from_utf8())
+	patient_id = int(json.get_data()["id"])
 	http.request_completed.connect(_on_collection_loaded)
 	http.request("%s/fish/collection/%d" % [BASE_URL, patient_id])
 

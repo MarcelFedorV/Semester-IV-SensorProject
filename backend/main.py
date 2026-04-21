@@ -10,23 +10,26 @@ import json
 import sys
 import random
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, HTMLResponse
-from fastapi.staticfiles import StaticFiles
-from starlette.middleware.base import BaseHTTPMiddleware
-import uvicorn
-from fish_logic import pick_fish
-from fish_data import FISH_BY_ID, FISH, LOCATIONS, MYSTERY_FISH_BY_LOCATION, LOCATIONS_BY_ID
-from ble_manager import BLEManager
-
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Depends, Form
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from passlib.context import CryptContext
 from database import SessionLocal, engine, Base
 from models import User
+from fishing_models import FishCatch, FishCollection, Achievement
+import fishing_db
 import bcrypt
+import uvicorn
+from fish_logic import pick_fish
+from fish_data import FISH_BY_ID, FISH, LOCATIONS, MYSTERY_FISH_BY_LOCATION, LOCATIONS_BY_ID
+from ble_manager import BLEManager
+
+
+
+
 
 app = FastAPI()
 
@@ -412,123 +415,153 @@ async def handle_message(ws: WebSocket, msg: dict):
 
 
 
-# Temporary in-memory storage until DB is set up
-# key: patient_id, value: set of fish ids caught
-caught_collection = {}
-caught_collection[1] = {1, 2, 3, 4,5 ,6, 7, 8, 9, 10, 11}
 
+@app.get("/FishingGame")
+async def serve_fishing_game(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
+    return FileResponse("games/FishingGame/index.html")
+
+# Serve all other FishingGame assets without auth check
+@app.get("/FishingGame/{path:path}")
+async def serve_fishing_assets(path: str):
+    file_path = f"games/FishingGame/{path}"
+    if os.path.exists(file_path):
+        return FileResponse(file_path)
+    return FileResponse("games/FishingGame/index.html")
+
+
+@app.get("/index.js")
+async def serve_js():
+    return FileResponse("games/FishingGame/index.js")
+
+@app.get("/index.wasm")
+async def serve_wasm():
+    return FileResponse("games/FishingGame/index.wasm")
+
+@app.get("/index.pck")
+async def serve_pck():
+    return FileResponse("games/FishingGame/index.pck")
+
+@app.get("/index.png")
+async def serve_png():
+    return FileResponse("games/FishingGame/index.png")
+
+@app.get("/index.icon.png")
+async def serve_icon():
+    return FileResponse("games/FishingGame/index.icon.png")
+
+@app.get("/index.audio.worklet.js")
+async def serve_audio_worklet():
+    return FileResponse("games/FishingGame/index.audio.worklet.js")
+
+@app.get("/api/me")
+async def get_me(request: Request):
+    username = request.session.get("user")
+    if not username:
+        return {"detail": "Not authenticated"}, 401
+    db = SessionLocal()
+    user = db.query(User).filter(User.username == username).first()
+    db.close()
+    if not user:
+        return {"detail": "Not found"}, 404
+    return {"id": user.id, "username": user.username}
 
 @app.post("/fish/catch")
 async def catch_fish(depth: float, patient_id: int = 1, location_id: int = 1):
-    caught = caught_collection.get(patient_id, set())
-    
-    # Check if location complete → mystery fish chance
-    location_fish = [f for f in FISH if f["location_id"] == location_id]
-    location_fish_ids = {f["id"] for f in location_fish}
-    location_complete = location_fish_ids.issubset(caught)
-    
-    if location_complete and random.random() < 0.3:
-        # 30% chance to catch mystery fish when location complete
-        mystery = MYSTERY_FISH_BY_LOCATION.get(location_id)
-        if mystery:
-            fish = mystery
+    db = SessionLocal()
+    try:
+        caught = fishing_db.get_caught_ids(db, patient_id)
+        location_fish = [f for f in FISH if f["location_id"] == location_id]
+        location_fish_ids = {f["id"] for f in location_fish}
+        location_complete = location_fish_ids.issubset(caught) if location_fish_ids else False
+
+        if location_complete and random.random() < 0.3:
+            mystery = MYSTERY_FISH_BY_LOCATION.get(location_id)
+            fish = mystery if mystery else pick_fish(depth, location_id)
         else:
             fish = pick_fish(depth, location_id)
-    else:
-        fish = pick_fish(depth, location_id)
 
-    already_caught = patient_id in caught_collection and fish["id"] in caught_collection[patient_id]
+        is_new = fishing_db.save_catch(db, patient_id, fish["id"], location_id, depth)
 
-    if patient_id not in caught_collection:
-        caught_collection[patient_id] = set()
-    caught_collection[patient_id].add(fish["id"])
-    
-    return {
-        "fish": fish,
-        "new": not already_caught,
-        "location_complete": location_complete,
-    }
+        return {
+            "fish": fish,
+            "new": is_new,
+            "location_complete": location_complete,
+        }
+    finally:
+        db.close()
 
 @app.get("/fish/collection/{patient_id}")
 async def get_collection(patient_id: int):
-    caught = caught_collection.get(patient_id, set())
-    print("Total FISH:", len(FISH))
-    print("First fish:", FISH[0] if FISH else "empty")
-    
-    collection = [
-        {
-            **f, 
-            "caught": f["id"] in caught,
-            "location": LOCATIONS_BY_ID[f["location_id"]]["name"] if f["location_id"] in LOCATIONS_BY_ID else "Unknown"
+    db = SessionLocal()
+    try:
+        caught = fishing_db.get_caught_ids(db, patient_id)
+        collection = [
+            {
+                **f,
+                "caught": f["id"] in caught,
+                "location": LOCATIONS_BY_ID[f["location_id"]]["name"] if f["location_id"] in LOCATIONS_BY_ID else "Unknown"
+            }
+            for f in FISH
+        ]
+
+        mystery_entries = []
+        for loc_id, mystery in MYSTERY_FISH_BY_LOCATION.items():
+            location_fish = [f for f in FISH if f["location_id"] == loc_id]
+            location_fish_ids = {f["id"] for f in location_fish}
+            location_complete = location_fish_ids.issubset(caught) if location_fish_ids else False
+
+            if location_complete:
+                mystery_entries.append({
+                    **mystery,
+                    "caught": mystery["id"] in caught,
+                    "location": LOCATIONS_BY_ID[loc_id]["name"]
+                })
+            else:
+                mystery_entries.append({
+                    "id": mystery["id"],
+                    "name": "???",
+                    "rarity": "Location Legend",
+                    "location_id": loc_id,
+                    "location": LOCATIONS_BY_ID[loc_id]["name"],
+                    "color": "#333333",
+                    "caught": False,
+                    "locked": True
+                })
+
+        return {
+            "collection": collection,
+            "mystery_fish": mystery_entries
         }
-        for f in FISH
-    ]
-    
-    mystery_entries = []
-    for loc_id, mystery in MYSTERY_FISH_BY_LOCATION.items():
-        location_fish = [f for f in FISH if f["location_id"] == loc_id]
-        location_fish_ids = {f["id"] for f in location_fish}
-        location_complete = location_fish_ids.issubset(caught)
-        print("loc_id:", loc_id)
-        print("location_fish_ids:", location_fish_ids)
-        print("caught:", caught)
-        print("location_complete:", location_complete)
-        
-        if location_complete:
-            mystery_entries.append({
-                **mystery,
-                "caught": mystery["id"] in caught,
-                "location": LOCATIONS_BY_ID[loc_id]["name"]
-            })
-        else:
-            mystery_entries.append({
-                "id": mystery["id"],
-                "name": "???",
-                "rarity": "Location Legend",
-                "location_id": loc_id,
-                "location": LOCATIONS_BY_ID[loc_id]["name"],
-                "color": "#333333",
-                "caught": False,
-                "locked": True
-            })
-    
-    return {
-        "collection": collection,
-        "mystery_fish": mystery_entries
-    }
+    finally:
+        db.close()
 
 @app.get("/fish/location_complete/{patient_id}/{location_id}")
 async def check_location_complete(patient_id: int, location_id: int):
-    """Check if player caught all normal fish in a location."""
-    caught = caught_collection.get(patient_id, set())
-    
-    # Get all normal fish for this location
-    location_fish = [f for f in FISH if f["location_id"] == location_id]
-    location_fish_ids = {f["id"] for f in location_fish}
-    
-    # Check if all caught
-    all_caught = location_fish_ids.issubset(caught)
-    
-    # Get mystery fish for this location
-    mystery = MYSTERY_FISH_BY_LOCATION.get(location_id)
-    mystery_unlocked = mystery and mystery["id"] in caught
-    
-    return {
-        "complete": all_caught,
-        "total": len(location_fish_ids),
-        "caught": len(location_fish_ids.intersection(caught)),
-        "mystery_unlocked": mystery_unlocked,
-        "mystery_fish": mystery if all_caught else None
-    }
-
+    db = SessionLocal()
+    try:
+        caught = fishing_db.get_caught_ids(db, patient_id)
+        location_fish = [f for f in FISH if f["location_id"] == location_id]
+        location_fish_ids = {f["id"] for f in location_fish}
+        all_caught = location_fish_ids.issubset(caught) if location_fish_ids else False
+        mystery = MYSTERY_FISH_BY_LOCATION.get(location_id)
+        mystery_unlocked = mystery and mystery["id"] in caught
+        return {
+            "complete": all_caught,
+            "total": len(location_fish_ids),
+            "caught": len(location_fish_ids.intersection(caught)),
+            "mystery_unlocked": mystery_unlocked,
+            "mystery_fish": mystery if all_caught else None
+        }
+    finally:
+        db.close()
 
 
 @app.get("/locations")
 async def get_locations():
     return {"locations": LOCATIONS}
 
-if os.path.exists("games/FishingGame/index.html"):
-    app.mount("/FishingGame", StaticFiles(directory="games/FishingGame", html=True), name="fishing")
 
 app.mount("/style", StaticFiles(directory="pages/styles"), name="style")
 
