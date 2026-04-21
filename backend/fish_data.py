@@ -115,7 +115,7 @@ FISH = [
         "depth": "deep",
         "fact": "Said to bring good luck to whoever catches one.",
         "color": "#FFD700",
-        "sprite": "dragonfish.png",
+        "sprite": "golden.png",
         "location_id": 1,
     },
     {
@@ -145,7 +145,7 @@ MYSTERY_FISH = [
         "depth": "deep",
         "fact": "A ghostly creature said to haunt the Baltic Sea.",
         "color": "#A0C4FF",
-        "sprite": None,  
+        "sprite": "ghost.png",  
     },
     {
         "id": 102,
@@ -155,7 +155,7 @@ MYSTERY_FISH = [
         "depth": "deep",
         "fact": "A massive beast lurking in the depths of the North Sea.",
         "color": "#6B8CFF",
-        "sprite": None,
+        "sprite": "titan.png",
     },
     {
         "id": 103,
