@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account</title>
+    <link rel="stylesheet" href="/style/common.css">
+</head>
+
+<body>
+
+    <div class="grid-bg"></div>
+    <div class="glow"></div>
+
+    <header>
+        <div class="logo">
+            <div>
+                <a href="/" class="logo-link">
+                    <div class="logo">
+                        <div class="logo-icon"></div>
+                        <div>
+                            <div class="logo-text">SensorProject</div>
+                            <div class="logo-sub">Semester IV · Group 11</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+        <div class="card-eyebrow"><a href="/metrics" style="text-decoration: none; color: inherit;">Metrics</a></div>
+        <div class="card-eyebrow">Fishing Game</div>
+        <div class="card-eyebrow">Space Funk</div>
+        <div class="header-right">
+            <span class="status-dot"></span>
+            system online
+        </div>
+        <div style="margin-left: auto; display: flex; align-items: center; gap: 16px;">
+            <span id="username-display" style="font-family: var(--mono); font-size: 11px; color: var(--text-dim);"></span>
+            <a href="#" onclick="handleLogout(); return false;" style="font-family: var(--mono); font-size: 11px; color: var(--accent); text-decoration: none; cursor: pointer;">
+                [LOGOUT]
+            </a>
+        </div>
+    </header>
+
+    <div class="main">
+        <div class="card">
+
+            <div class="card-header">
+                <div class="card-eyebrow">Account Settings</div>
+                <div class="card-title">My Profile</div>
+                <div class="card-sub">View and update your account information</div>
+            </div>
+
+            <!-- Account Info Section -->
+            <div style="margin-bottom: 24px;">
+                <div class="section-label">Account Information</div>
+                
+                <div class="input-group">
+                    <label class="input-label">Username</label>
+                    <input type="text" id="username" disabled style="background: var(--bg); color: var(--text-dim); cursor: not-allowed;">
+                </div>
+
+                <div class="input-group">
+                    <label class="input-label">Email</label>
+                    <input type="email" id="email" placeholder="your.email@example.com">
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- Profile Details Section -->
+            <div>
+                <div class="section-label">Profile Details</div>
+                
+                <div class="input-group">
+                    <label class="input-label">Bio</label>
+                    <textarea id="bio" placeholder="Tell us about yourself..." style="width: 100%; min-height: 80px; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 10px 14px; font-family: var(--sans); font-size: 12px; color: var(--text); outline: none; resize: vertical; box-sizing: border-box; transition: border-color .15s, box-shadow .15s;" onfocus="this.style.borderColor = 'var(--accent)'; this.style.boxShadow = '0 0 0 3px rgba(0, 229, 255, .08)';" onblur="this.style.borderColor = 'var(--border)'; this.style.boxShadow = 'none';"></textarea>
+                </div>
+
+                <div class="input-group">
+                    <label class="input-label">Age</label>
+                    <input type="number" id="age" placeholder="Your age" min="1" max="150">
+                </div>
+
+                <div class="input-group">
+                    <label class="input-label">Favorite Game</label>
+                    <select id="favorite-game" style="width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 10px 14px; font-family: var(--sans); font-size: 12px; color: var(--text); outline: none; box-sizing: border-box; transition: border-color .15s, box-shadow .15s;" onfocus="this.style.borderColor = 'var(--accent)'; this.style.boxShadow = '0 0 0 3px rgba(0, 229, 255, .08)';" onblur="this.style.borderColor = 'var(--border)'; this.style.boxShadow = 'none';">
+                        <option value="">Select your favorite game</option>
+                        <option value="Fishing Game">Fishing Game</option>
+                        <option value="Space Funk">Space Funk</option>
+                    </select>
+                </div>
+
+                <div id="save-message" style="color: #00ff9d; font-size: 12px; margin-bottom: 10px; display: none; font-family: var(--mono);"></div>
+                <div id="error-message" style="color: #ff6b6b; font-size: 12px; margin-bottom: 10px; display: none; font-family: var(--mono);"></div>
+
+                <button class="btn btn-primary" onclick="saveProfile()">▶ Save Changes</button>
+            </div>
+
+            <div class="divider"></div>
+
+            <a href="/" class="btn btn-secondary">← Back to Home</a>
+
+        </div>
+    </div>
+
+    <footer>
+        SEMESTER-IV-SENSORPROJECT &nbsp;·&nbsp; Meet the team of <a href="/developers">Group 11</a>
+    </footer>
+
+    <script>
+        // Load user data on page load
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const response = await fetch('/api/user');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('username').value = data.username;
+                    document.getElementById('username-display').textContent = data.username;
+                    document.getElementById('email').value = data.email || '';
+                    document.getElementById('bio').value = data.bio || '';
+                    document.getElementById('age').value = data.age || '';
+                    document.getElementById('favorite-game').value = data.favorite_game || '';
+                } else {
+                    showError('Failed to load user data');
+                }
+            } catch (error) {
+                showError('Error loading profile');
+                console.error(error);
+            }
+        });
+
+        async function saveProfile() {
+            const errorMsg = document.getElementById('error-message');
+            const successMsg = document.getElementById('save-message');
+            errorMsg.style.display = 'none';
+            successMsg.style.display = 'none';
+
+            const email = document.getElementById('email').value.trim();
+            const bio = document.getElementById('bio').value.trim();
+            const age = document.getElementById('age').value.trim();
+            const favoriteGame = document.getElementById('favorite-game').value.trim();
+
+            if (email && !isValidEmail(email)) {
+                showError('Please enter a valid email address');
+                return;
+            }
+
+            if (age && (isNaN(age) || age < 1 || age > 150)) {
+                showError('Please enter a valid age');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/user', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: email || null,
+                        bio: bio || null,
+                        age: age ? parseInt(age) : null,
+                        favorite_game: favoriteGame || null
+                    })
+                });
+
+                if (response.ok) {
+                    successMsg.textContent = 'Profile updated successfully!';
+                    successMsg.style.display = 'block';
+                    setTimeout(() => {
+                        successMsg.style.display = 'none';
+                    }, 3000);
+                } else {
+                    showError('Failed to update profile');
+                }
+            } catch (error) {
+                showError('Error saving profile');
+                console.error(error);
+            }
+        }
+
+        function isValidEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+
+        function showError(message) {
+            const errorMsg = document.getElementById('error-message');
+            errorMsg.textContent = message;
+            errorMsg.style.display = 'block';
+        }
+
+        function handleLogout() {
+            if (confirm('Are you sure you want to log out?')) {
+                window.location.href = '/logout';
+            }
+        }
+    </script>
+
+</body>
+
+</html>

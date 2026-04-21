@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome</title>
+    <link rel="stylesheet" href="/style/common.css">
+</head>
+
+<body>
+
+    <div class="grid-bg"></div>
+    <div class="glow"></div>
+
+    <header>
+        <div class="logo">
+            <div>
+                <a href="/" class="logo-link">
+                    <div class="logo">
+                        <div class="logo-icon"></div>
+                        <div>
+                            <div class="logo-text">SensorProject</div>
+                            <div class="logo-sub">Semester IV · Group 11</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+        <div class="card-eyebrow"><a href="/metrics" style="text-decoration: none; color: inherit;">Metrics</a></div>
+        <div class="card-eyebrow">Fishing Game</div>
+        <div class="card-eyebrow">Space Funk</div>
+        <div class="header-right">
+            <span class="status-dot"></span>
+            system online
+        </div>
+        <div style="margin-left: auto; display: flex; align-items: center; gap: 16px;">
+            <span id="username-display" style="font-family: var(--mono); font-size: 11px; color: var(--text-dim); display: none;"></span>
+            <a href="/account" style="font-family: var(--mono); font-size: 11px; color: var(--accent); text-decoration: none; cursor: pointer; display: none;" id="account-btn">
+                [ACCOUNT]
+            </a>
+            <a href="#" onclick="handleLogout(); return false;" style="font-family: var(--mono); font-size: 11px; color: var(--accent); text-decoration: none; cursor: pointer; display: none;" id="logout-btn">
+                [LOGOUT]
+            </a>
+        </div>
+    </header>
+
+    <div class="main">
+        <div class="card" id="login-card">
+
+            <div class="card-header">
+                <div class="card-eyebrow">Welcome</div>
+                <div class="card-title">Patient Portal</div>
+                <div class="card-sub">Sign in to your account</div>
+            </div>
+
+            <!-- Tab switcher -->
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('login')">Login</button>
+            </div>
+
+            <!-- Login panel -->
+            <div class="tab-panel active" id="panel-login">
+                <div class="input-group">
+                    <label class="input-label">Username</label>
+                    <input type="text" placeholder="e.g. john" id="login-id">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Password</label>
+                    <input type="password" placeholder="••••••••" id="login-pw">
+                </div>
+                <div id="login-error" style="color: #ff6b6b; font-size: 12px; margin-bottom: 10px; display: none;"></div>
+                <button class="btn btn-primary" onclick="handleLogin()">▶ Sign In</button>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="section-label">Staff Access</div>
+            <a href="/admin/login" class="btn btn-secondary" style="margin-top: 10px;">Admin Portal</a>
+
+        </div>
+
+        <!-- Greeting card for regular users -->
+        <div class="card" id="greeting-card" style="display: none; margin-top: 20px;">
+
+            <div class="card-header">
+                <div class="card-eyebrow">Welcome back</div>
+                <div class="card-title" id="greeting-title">Hello, User!</div>
+                <div class="card-sub">You're now logged in to your account.</div>
+            </div>
+
+            <div class="divider"></div>
+
+            <a href="/account" class="btn btn-primary">View Account</a>
+            <a href="/metrics" class="btn btn-secondary" style="margin-left: 10px;">View Metrics</a>
+
+        </div>
+    </div>
+
+
+    <div style="float: right; position:absolute;right:0px;top:100px;" class="main">
+        <div class="card">
+
+            <div class="card-header">
+                <div class="card-title">BETA VERSION, THINGS WILL LOOK DIFFERENTLY</div>
+            </div>
+
+        </div>
+    </div>
+
+    <footer>
+        SEMESTER-IV-SENSORPROJECT &nbsp;·&nbsp; Meet the team of <a href="/developers">Group 11</a>
+    </footer>
+
+    <script>
+        // Check if user is logged in on page load
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const response = await fetch('/api/check-auth');
+                const data = await response.json();
+                if (!data.authenticated) {
+                    showLoginModal();
+                    hideLogoutButton();
+                    hideGreetingCard();
+                } else {
+                    // Check if user is admin
+                    const adminResponse = await fetch('/api/check-admin');
+                    const adminData = await adminResponse.json();
+                    
+                    if (adminData.is_admin) {
+                        // Admin user - redirect to admin dashboard
+                        window.location.href = '/admin/dashboard';
+                    } else {
+                        // Regular user - show greeting card
+                        hideLoginModal();
+                        showLogoutButton(data.user);
+                        showGreetingCard(data.user);
+                    }
+                }
+            } catch (error) {
+                showLoginModal();
+                hideLogoutButton();
+                hideGreetingCard();
+            }
+        });
+
+        function switchTab(name) {
+            document.querySelectorAll('.tab').forEach((t, i) => {
+                t.classList.toggle('active', ['login'][i] === name);
+            });
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.getElementById(`panel-${name}`).classList.add('active');
+        }
+
+        async function handleLogin() {
+            const username = document.getElementById('login-id').value.trim();
+            const password = document.getElementById('login-pw').value.trim();
+            const errorDiv = document.getElementById('login-error');
+            
+            if (!username || !password) {
+                errorDiv.textContent = 'Please enter both username and password.';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('username', username);
+                formData.append('password', password);
+
+                await fetch('/login', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                // Always verify the session was actually created — the /login endpoint
+                // may return HTTP 200 even on failure (e.g. re-rendered login page).
+                const authResponse = await fetch('/api/check-auth');
+                const authData = await authResponse.json();
+
+                if (authData.authenticated) {
+                    // Check if the logged-in user is an admin
+                    const adminResponse = await fetch('/api/check-admin');
+                    const adminData = await adminResponse.json();
+
+                    if (adminData.is_admin) {
+                        // Admin user - redirect to admin dashboard
+                        window.location.href = '/admin/dashboard';
+                    } else {
+                        // Regular user - show greeting card
+                        hideLoginModal();
+                        showLogoutButton(username);
+                        showGreetingCard(username);
+                    }
+                } else {
+                    errorDiv.textContent = 'Invalid username or password.';
+                    errorDiv.style.display = 'block';
+                    document.getElementById('login-pw').value = '';
+                }
+            } catch (error) {
+                errorDiv.textContent = 'Login failed. Please try again.';
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        function hideLoginModal() {
+            const loginCard = document.getElementById('login-card');
+            const betaCard = document.querySelector('[style*="float: right"]');
+            if (loginCard) loginCard.style.display = 'none';
+            if (betaCard) betaCard.style.display = 'none';
+        }
+
+        function showLoginModal() {
+            const loginCard = document.getElementById('login-card');
+            const betaCard = document.querySelector('[style*="float: right"]');
+            if (loginCard) loginCard.style.display = 'block';
+            if (betaCard) betaCard.style.display = 'block';
+            hideGreetingCard();
+        }
+
+        function showGreetingCard(username) {
+            const greetingCard = document.getElementById('greeting-card');
+            const greetingTitle = document.getElementById('greeting-title');
+            if (greetingCard) {
+                greetingCard.style.display = 'block';
+                greetingTitle.textContent = `Hello, ${username}!`;
+            }
+        }
+
+        function hideGreetingCard() {
+            const greetingCard = document.getElementById('greeting-card');
+            if (greetingCard) greetingCard.style.display = 'none';
+        }
+
+        function showLogoutButton(username) {
+            document.getElementById('logout-btn').style.display = 'block';
+            document.getElementById('account-btn').style.display = 'block';
+            document.getElementById('username-display').style.display = 'block';
+            document.getElementById('username-display').textContent = username;
+        }
+
+        function hideLogoutButton() {
+            document.getElementById('logout-btn').style.display = 'none';
+            document.getElementById('account-btn').style.display = 'none';
+            document.getElementById('username-display').style.display = 'none';
+        }
+
+        function handleLogout() {
+            if (confirm('Are you sure you want to log out?')) {
+                window.location.href = '/logout';
+            }
+        }
+    </script>
+
+</body>
+
+</html>

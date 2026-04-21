@@ -1,22 +1,48 @@
 services:
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: frontend.Dockerfile
+    container_name: frontend
+    ports: 
+    depends_on:
+      backend:
+        condition: service_started
+    networks:
+      - app-network 
+      
+
   backend:
     build:
       context: ./backend
-      dockerfile: ./container-stuff/backend.Dockerfile
+      dockerfile: backend.Dockerfile
     container_name: backend
     ports:
       - "8000:8000"
+    depends_on:
+      database:
+        condition: service_started
     networks:
       - app-network
 
+  database:
+    build:
+      context: ./database
+      dockerfile: db.Dockerfile
+    container_name: database
+    volumes:
+      - db_data:/app/data
+    networks:
+      - app-network
 
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: cloudflared
     command: tunnel --config /etc/cloudflared/config.yml run
     volumes:
-      - ./backend/container-stuff/docker-cloudflare-tunnel.yml:/etc/cloudflared/config.yml
-      - ./backend/container-stuff/credentials.json:/etc/cloudflared/credentials.json
+      - ./cloudflared/docker-cloudflare-tunnel.yml:/etc/cloudflared/config.yml
+      - ./cloudflared/credentials.json:/etc/cloudflared/credentials.json
     depends_on:
       - backend
     networks:
@@ -24,3 +50,6 @@ services:
 
 networks:
   app-network:
+  
+volumes:
+  db_data:
