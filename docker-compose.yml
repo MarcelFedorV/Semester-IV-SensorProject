@@ -2,7 +2,7 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: backend.Dockerfile
+      dockerfile: ./container-stuff/backend.Dockerfile
     container_name: backend
     ports:
       - "8000:8000"
@@ -13,9 +13,10 @@ services:
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: cloudflared
-    command: cloudflared tunnel --config cloudflare-tunnel.yml run
+    command: tunnel --config /etc/cloudflared/config.yml run
     volumes:
-      - ./cloudflared:/etc/cloudflared
+      - ./backend/container-stuff/docker-cloudflare-tunnel.yml:/etc/cloudflared/config.yml
+      - ./backend/container-stuff/credentials.json:/etc/cloudflared/credentials.json
     depends_on:
       - backend
     networks:
