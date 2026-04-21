@@ -1,7 +1,0 @@
-tunnel: sensorproject
-credentials-file: C:\mystuff\Desktop\SoftwareEngineering\Studies\Sem4\PROJECT\Semester-IV-SensorProject\backend\container-stuff\credentials.json
-
-ingress:
-  - hostname: game.sensorproject.org
-    service: http://localhost:8000
-  - service: http_status:404
