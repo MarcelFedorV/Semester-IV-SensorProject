@@ -19,6 +19,15 @@ from fish_data import FISH_BY_ID, FISH
 
 from ble_manager import BLEManager
 
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Depends, Form
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
+from starlette.middleware.sessions import SessionMiddleware
+from passlib.context import CryptContext
+from database import SessionLocal, engine, Base
+from models import User
+import bcrypt
+
 app = FastAPI()
 
 
@@ -66,31 +75,272 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 app = FastAPI(lifespan=lifespan)
+
+Base.metadata.create_all(bind=engine)
+app.add_middleware(SessionMiddleware, secret_key="your-secret-key-change-this")
+
+templates = Jinja2Templates(directory="pages")
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# --- Auth helpers ---
+def get_current_user(request: Request):
+    return request.session.get("user")
+
+def require_auth(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
+    return None
+
 app.add_middleware(SecurityHeadersMiddleware)
 
-
 @app.get("/")
-async def serve_welcome():
+async def serve_welcome(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
     return FileResponse("pages/welcome.html")
 
+@app.get("/login")
+async def login_page(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request, "error": None})
+
+@app.post("/login")
+async def login(request: Request, username: str = Form(...), password: str = Form(...)):
+    db = SessionLocal()
+    user = db.query(User).filter(User.username == username).first()
+    db.close()
+    if not user or not bcrypt.checkpw(password.encode("utf-8"), user.password.encode("utf-8")):
+        return RedirectResponse("/login", status_code=302)
+    request.session["user"] = user.username
+    return RedirectResponse("/", status_code=302)
+
+@app.post("/register")
+async def register(request: Request, username: str = Form(...), password: str = Form(...)):
+    db = SessionLocal()
+    
+    # Check if user already exists
+    if db.query(User).filter(User.username == username).first():
+        db.close()
+        return {"detail": "Username already exists"}, 400
+    
+    # Hash password and create user
+    hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
+    user = User(username=username, password=hashed.decode("utf-8"))
+    db.add(user)
+    db.commit()
+    db.close()
+    
+    return {"message": "User created successfully"}
+
+@app.get("/api/check-auth")
+async def check_auth(request: Request):
+    user = request.session.get("user")
+    return {"authenticated": user is not None, "user": user}
+
+@app.get("/account")
+async def account_page(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
+    return FileResponse("pages/account.html")
+
+@app.get("/api/user")
+async def get_user(request: Request):
+    username = request.session.get("user")
+    if not username:
+        return {"detail": "Not authenticated"}, 401
+    
+    db = SessionLocal()
+    user = db.query(User).filter(User.username == username).first()
+    db.close()
+    
+    if not user:
+        return {"detail": "User not found"}, 404
+    
+    return {
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "bio": user.bio,
+        "age": user.age,
+        "favorite_game": user.favorite_game,
+        "role": user.role
+    }
+
+@app.put("/api/user")
+async def update_user(request: Request):
+    username = request.session.get("user")
+    if not username:
+        return {"detail": "Not authenticated"}, 401
+    
+    data = await request.json()
+    
+    db = SessionLocal()
+    user = db.query(User).filter(User.username == username).first()
+    
+    if not user:
+        db.close()
+        return {"detail": "User not found"}, 404
+    
+    if "email" in data:
+        user.email = data.get("email")
+    if "bio" in data:
+        user.bio = data.get("bio")
+    if "age" in data:
+        user.age = data.get("age")
+    if "favorite_game" in data:
+        user.favorite_game = data.get("favorite_game")
+    
+    db.commit()
+    db.close()
+    
+    return {"message": "User updated successfully"}
+
+@app.get("/admin/login")
+async def admin_login_page(request: Request):
+    if request.session.get("admin"):
+        return RedirectResponse("/admin/dashboard", status_code=302)
+    return FileResponse("pages/admin_login.html")
+
+@app.post("/admin/login")
+async def admin_login(request: Request, username: str = Form(...), password: str = Form(...)):
+    db = SessionLocal()
+    user = db.query(User).filter(User.username == username).first()
+    db.close()
+    
+    if not user or user.role != "admin" or not bcrypt.checkpw(password.encode("utf-8"), user.password.encode("utf-8")):
+        return RedirectResponse("/admin/login", status_code=302)
+    
+    request.session["admin"] = user.username
+    request.session["user"] = user.username
+    return RedirectResponse("/admin/dashboard", status_code=302)
+
+@app.get("/api/check-admin")
+async def check_admin(request: Request):
+    admin = request.session.get("admin")
+    user = request.session.get("user")
+    return {
+        "authenticated": admin is not None,
+        "is_admin": admin is not None,
+        "user": user
+    }
+
+@app.get("/admin/dashboard")
+async def admin_dashboard(request: Request):
+    if not request.session.get("admin"):
+        return RedirectResponse("/admin/login", status_code=302)
+    return FileResponse("pages/admin_dashboard.html")
+
+@app.get("/api/admin/users")
+async def get_all_users(request: Request):
+    if not request.session.get("admin"):
+        return {"detail": "Unauthorized"}, 401
+    
+    db = SessionLocal()
+    users = db.query(User).all()
+    db.close()
+    
+    return {
+        "users": [
+            {
+                "id": u.id,
+                "username": u.username,
+                "email": u.email,
+                "role": u.role
+            }
+            for u in users
+        ]
+    }
+
+@app.post("/api/admin/create-user")
+async def admin_create_user(request: Request, username: str = Form(...), password: str = Form(...), email: str = Form(None), role: str = Form("user")):
+    if not request.session.get("admin"):
+        return {"detail": "Unauthorized"}, 401
+    
+    # Validate role
+    if role not in ["user", "admin"]:
+        return {"detail": "Invalid role"}, 400
+    
+    db = SessionLocal()
+    
+    # Check if user already exists
+    if db.query(User).filter(User.username == username).first():
+        db.close()
+        return {"detail": "Username already exists"}, 400
+    
+    # Hash password and create user
+    hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
+    user = User(
+        username=username,
+        password=hashed.decode("utf-8"),
+        email=email if email else None,
+        role=role
+    )
+    db.add(user)
+    db.commit()
+    db.close()
+    
+    return {"message": "User created successfully"}
+
+@app.delete("/api/admin/users/{user_id}")
+async def admin_delete_user(request: Request, user_id: int):
+    if not request.session.get("admin"):
+        return {"detail": "Unauthorized"}, 401
+    
+    db = SessionLocal()
+    user = db.query(User).filter(User.id == user_id).first()
+    
+    if not user:
+        db.close()
+        return {"detail": "User not found"}, 404
+    
+    # Prevent deleting admins
+    if user.role == "admin":
+        db.close()
+        return {"detail": "Cannot delete admin users"}, 403
+    
+    db.delete(user)
+    db.commit()
+    db.close()
+    
+    return {"message": "User deleted successfully"}
+
+@app.get("/admin/logout")
+async def admin_logout(request: Request):
+    request.session.clear()
+    return RedirectResponse("/admin/login", status_code=302)
+
+@app.get("/logout")
+async def logout(request: Request):
+    request.session.clear()
+    return RedirectResponse("/login", status_code=302)
+
 @app.get("/ble")
-async def serve_ble():
+async def serve_ble(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
     return FileResponse("index.html")
 
 @app.get("/developers")
-async def serve_dev():
+async def serve_dev(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
     return FileResponse("pages/developers.html")
 
 @app.get("/frontpage")
-async def serve_dev():
+async def serve_frontpage(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
     return FileResponse("pages/frontpage.html")
 
 @app.get("/metrics")
-async def serve_dev():
+async def serve_metrics(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
     return FileResponse("pages/metrics.html")
 
 @app.get("/Start")
-def landing():
+async def landing(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
     return FileResponse("Start.html")
 
 @app.websocket("/ws")

@@ -431,3 +431,42 @@ footer {
     z-index: 10;
     letter-spacing: .05em;
 }
+
+/* ── Authentication States ── */
+body.unauthenticated .card:not(:first-of-type) {
+    filter: blur(15px);
+    pointer-events: none;
+}
+
+body.unauthenticated header,
+body.unauthenticated [style*="float: right"] {
+    filter: blur(15px);
+    pointer-events: none;
+}
+
+/* Login/Register card styling */
+.card {
+    transition: filter 0.3s ease;
+}
+
+/* Error message styling */
+#login-error,
+#register-error {
+    font-family: var(--mono);
+    padding: 10px 12px;
+    background: rgba(255, 107, 107, 0.1);
+    border: 1px solid rgba(255, 107, 107, 0.3);
+    border-radius: 4px;
+    color: #ff6b6b;
+}
+
+/* Success message styling */
+.success-message {
+    font-family: var(--mono);
+    padding: 10px 12px;
+    background: rgba(0, 255, 157, 0.1);
+    border: 1px solid rgba(0, 255, 157, 0.3);
+    border-radius: 4px;
+    color: var(--accent2);
+    margin-bottom: 10px;
+}
