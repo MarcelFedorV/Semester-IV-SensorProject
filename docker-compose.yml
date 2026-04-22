@@ -1,18 +1,5 @@
 services:
 
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: frontend.Dockerfile
-    container_name: frontend
-    ports: 
-    depends_on:
-      backend:
-        condition: service_started
-    networks:
-      - app-network 
-      
-
   backend:
     build:
       context: ./backend
@@ -20,9 +7,13 @@ services:
     container_name: backend
     ports:
       - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:////app/data/users.db
     depends_on:
       database:
         condition: service_started
+    volumes:
+    - db_data:/app/data
     networks:
       - app-network
 
