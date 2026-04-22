@@ -1,7 +1,33 @@
 To install:
--bleak
--fastapi
--uvicorn
--websockets
+
+bleak
+fastapi
+uvicorn
+websockets
+sqlalchemy
+passlib[bcrypt]
+itsdangerous
+jinja2
+
 
 just run the main file
+
+
+
+>> Run Docker compose:
+
+docker-compose up --build
+
+
+
+>> Run backend container only:
+
+cd backend
+docker build -f backend.Dockerfile -t backend-app .
+docker run -d --name backend -p 8000:8000 backend-app
+
+cd frontend
+docker build -f frontend.Dockerfile -t frontend-app .
+docker run -d --name frontend -p 8000:8000 frontend-app
+
+Delete images after use!! (still sth to fix)

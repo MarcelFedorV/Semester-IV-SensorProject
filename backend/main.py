@@ -105,7 +105,9 @@ async def serve_welcome(request: Request):
 
 @app.get("/login")
 async def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request, "error": None})
+    return templates.TemplateResponse(request=request,
+    name="login.html",
+    context={"error": None})
 
 @app.post("/login")
 async def login(request: Request, username: str = Form(...), password: str = Form(...)):
@@ -566,4 +568,4 @@ async def get_locations():
 app.mount("/style", StaticFiles(directory="pages/styles"), name="style")
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=False)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
