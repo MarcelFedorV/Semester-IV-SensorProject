@@ -1,2 +1,2 @@
 echo "__pycache__/" >> .gitignore
-echo "*.pyc" >> .gitignore
+echo "*.pyc" >> .gitignorebackend/cloudflare.tunnel.yml

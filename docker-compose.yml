@@ -1,0 +1,46 @@
+services:
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: backend.Dockerfile
+    container_name: backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:////app/data/users.db
+    depends_on:
+      database:
+        condition: service_started
+    volumes:
+    - db_data:/app/data
+    networks:
+      - app-network
+
+  database:
+    build:
+      context: ./database
+      dockerfile: db.Dockerfile
+    container_name: database
+    volumes:
+      - db_data:/app/data
+    networks:
+      - app-network
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    command: tunnel --config /etc/cloudflared/config.yml run
+    volumes:
+      - ./cloudflared/docker-cloudflare-tunnel.yml:/etc/cloudflared/config.yml
+      - ./cloudflared/credentials.json:/etc/cloudflared/credentials.json
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+networks:
+  app-network:
+  
+volumes:
+  db_data:
