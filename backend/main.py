@@ -101,7 +101,9 @@ async def serve_welcome(request: Request):
 
 @app.get("/login")
 async def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request, "error": None})
+    return templates.TemplateResponse(request=request,
+    name="login.html",
+    context={"error": None})
 
 @app.post("/login")
 async def login(request: Request, username: str = Form(...), password: str = Form(...)):
