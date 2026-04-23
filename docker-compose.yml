@@ -9,6 +9,7 @@ services:
       - "8000:8000"
     environment:
       - DATABASE_URL=sqlite:////app/data/users.db
+      - BLE_BRIDGE_URL=ws://host.docker.internal:8765
     depends_on:
       database:
         condition: service_started
@@ -30,7 +31,7 @@ services:
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: cloudflared
-    command: tunnel --config /etc/cloudflared/config.yml run
+    command: tunnel --protocol http2 --config /etc/cloudflared/config.yml run
     volumes:
       - ./cloudflared/docker-cloudflare-tunnel.yml:/etc/cloudflared/config.yml
       - ./cloudflared/credentials.json:/etc/cloudflared/credentials.json
