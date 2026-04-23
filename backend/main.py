@@ -35,8 +35,6 @@ import bcrypt
 import uvicorn
 from fish_logic import pick_fish
 from fish_data import FISH_BY_ID, FISH, LOCATIONS, MYSTERY_FISH_BY_LOCATION, LOCATIONS_BY_ID
-from ble_manager import BLEManager
-
 
 
 
@@ -517,7 +515,62 @@ async def get_collection(patient_id: int):
             }
             for f in FISH
         ]
-    }
+
+        mystery_entries = []
+        for loc_id, mystery in MYSTERY_FISH_BY_LOCATION.items():
+            location_fish = [f for f in FISH if f["location_id"] == loc_id]
+            location_fish_ids = {f["id"] for f in location_fish}
+            location_complete = location_fish_ids.issubset(caught) if location_fish_ids else False
+
+            if location_complete:
+                mystery_entries.append({
+                    **mystery,
+                    "caught": mystery["id"] in caught,
+                    "location": LOCATIONS_BY_ID[loc_id]["name"]
+                })
+            else:
+                mystery_entries.append({
+                    "id": mystery["id"],
+                    "name": "???",
+                    "rarity": "Location Legend",
+                    "location_id": loc_id,
+                    "location": LOCATIONS_BY_ID[loc_id]["name"],
+                    "color": "#333333",
+                    "caught": False,
+                    "locked": True
+                })
+
+        return {
+            "collection": collection,
+            "mystery_fish": mystery_entries
+        }
+    finally:
+        db.close()
+
+@app.get("/fish/location_complete/{patient_id}/{location_id}")
+async def check_location_complete(patient_id: int, location_id: int):
+    db = SessionLocal()
+    try:
+        caught = fishing_db.get_caught_ids(db, patient_id)
+        location_fish = [f for f in FISH if f["location_id"] == location_id]
+        location_fish_ids = {f["id"] for f in location_fish}
+        all_caught = location_fish_ids.issubset(caught) if location_fish_ids else False
+        mystery = MYSTERY_FISH_BY_LOCATION.get(location_id)
+        mystery_unlocked = mystery and mystery["id"] in caught
+        return {
+            "complete": all_caught,
+            "total": len(location_fish_ids),
+            "caught": len(location_fish_ids.intersection(caught)),
+            "mystery_unlocked": mystery_unlocked,
+            "mystery_fish": mystery if all_caught else None
+        }
+    finally:
+        db.close()
+
+
+@app.get("/locations")
+async def get_locations():
+    return {"locations": LOCATIONS}
 
 print(f"[DEBUG] cwd: {os.getcwd()}")
 print(f"[DEBUG] files in cwd: {os.listdir('.')}")

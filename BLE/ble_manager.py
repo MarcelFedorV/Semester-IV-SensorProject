@@ -149,11 +149,6 @@ class BLEManager:
     # ── Scanning ──────────────────────────────────────────────────────────────
 
     def _on_detection(self, device: BLEDevice, adv: AdvertisementData):
-        # Only surface devices that advertise the CSC service
-        advertised = [str(u).lower() for u in (adv.service_uuids or [])]
-        if CSC_SERVICE.lower() not in advertised:
-            return
-
         name = device.name or adv.local_name or ""
         manufacturer = None
         if adv.manufacturer_data:
