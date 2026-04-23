@@ -10,6 +10,16 @@ import json
 import sys
 import random
 from contextlib import asynccontextmanager
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
+import uvicorn
+from fish_logic import pick_fish
+from fish_data import FISH_BY_ID, FISH
+
+from ble_client import BLEClient
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Depends, Form
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -37,7 +47,7 @@ app = FastAPI()
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-manager     = BLEManager()
+manager     = BLEClient()
 connections: list[WebSocket] = []
 
 
@@ -61,11 +71,13 @@ manager.on_error                = lambda m: asyncio.create_task(broadcast({"type
 manager.on_interrogation_result = lambda r: asyncio.create_task(broadcast({"type": "interrogation_result", "result":  r}))
 manager.on_switch_progress      = lambda m: asyncio.create_task(broadcast({"type": "switch_progress",       "message": m}))
 manager.on_switch_done          = lambda r: asyncio.create_task(broadcast({"type": "switch_done",           "result":  r}))
-manager.on_sensor_state = lambda active: asyncio.create_task(broadcast({"type": "sensor_state",          "active": active}))
+manager.on_devices_list         = lambda l: asyncio.create_task(broadcast({"type": "devices_list", "devices": l}))
+manager.on_status               = lambda s: asyncio.create_task(broadcast({"type": "status",       "status":  s}))
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    await manager.connect_to_bridge()
     print("[Server] Ready at http://localhost:8000")
     yield
     await manager.disconnect()
@@ -354,11 +366,9 @@ async def websocket_endpoint(ws: WebSocket):
     await ws.accept()
     connections.append(ws)
     print(f"[WS] Browser connected ({len(connections)} total)")
-    await ws.send_text(json.dumps({
-        "type":    "init",
-        "devices": manager.get_devices(),
-        "status":  manager.get_status(),
-    }))
+    await ws.send_text(json.dumps({"type": "init"}))
+    await manager.get_devices()  # result broadcasts via on_devices_list
+    await manager.get_status()   # result broadcasts via on_status
 
     async def heartbeat():
         while True:
@@ -507,63 +517,16 @@ async def get_collection(patient_id: int):
             }
             for f in FISH
         ]
+    }
 
-        mystery_entries = []
-        for loc_id, mystery in MYSTERY_FISH_BY_LOCATION.items():
-            location_fish = [f for f in FISH if f["location_id"] == loc_id]
-            location_fish_ids = {f["id"] for f in location_fish}
-            location_complete = location_fish_ids.issubset(caught) if location_fish_ids else False
+print(f"[DEBUG] cwd: {os.getcwd()}")
+print(f"[DEBUG] files in cwd: {os.listdir('.')}")
+print(f"[DEBUG] game path exists: {os.path.exists('games/FishingGame/index.html')}")
 
-            if location_complete:
-                mystery_entries.append({
-                    **mystery,
-                    "caught": mystery["id"] in caught,
-                    "location": LOCATIONS_BY_ID[loc_id]["name"]
-                })
-            else:
-                mystery_entries.append({
-                    "id": mystery["id"],
-                    "name": "???",
-                    "rarity": "Location Legend",
-                    "location_id": loc_id,
-                    "location": LOCATIONS_BY_ID[loc_id]["name"],
-                    "color": "#333333",
-                    "caught": False,
-                    "locked": True
-                })
-
-        return {
-            "collection": collection,
-            "mystery_fish": mystery_entries
-        }
-    finally:
-        db.close()
-
-@app.get("/fish/location_complete/{patient_id}/{location_id}")
-async def check_location_complete(patient_id: int, location_id: int):
-    db = SessionLocal()
-    try:
-        caught = fishing_db.get_caught_ids(db, patient_id)
-        location_fish = [f for f in FISH if f["location_id"] == location_id]
-        location_fish_ids = {f["id"] for f in location_fish}
-        all_caught = location_fish_ids.issubset(caught) if location_fish_ids else False
-        mystery = MYSTERY_FISH_BY_LOCATION.get(location_id)
-        mystery_unlocked = mystery and mystery["id"] in caught
-        return {
-            "complete": all_caught,
-            "total": len(location_fish_ids),
-            "caught": len(location_fish_ids.intersection(caught)),
-            "mystery_unlocked": mystery_unlocked,
-            "mystery_fish": mystery if all_caught else None
-        }
-    finally:
-        db.close()
-
-
-@app.get("/locations")
-async def get_locations():
-    return {"locations": LOCATIONS}
-
+if os.path.exists("games/FishingGame/index.html"):
+    app.mount("/FishingGame", StaticFiles(directory="games/FishingGame", html=True), name="fishing")
+if os.path.exists("games/FishingGame/index.html"):
+    app.mount("/FishingGame", StaticFiles(directory="games/FishingGame", html=True), name="fishing")
 
 app.mount("/style", StaticFiles(directory="pages/styles"), name="style")
 
