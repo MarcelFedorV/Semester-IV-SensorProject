@@ -17,7 +17,7 @@ import uvicorn
 from fish_logic import pick_fish
 from fish_data import FISH_BY_ID, FISH
 
-from ble_manager import BLEManager
+from ble_client import BLEClient
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Depends, Form
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
@@ -34,7 +34,7 @@ app = FastAPI()
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-manager     = BLEManager()
+manager     = BLEClient()
 connections: list[WebSocket] = []
 
 
@@ -58,10 +58,13 @@ manager.on_error                = lambda m: asyncio.create_task(broadcast({"type
 manager.on_interrogation_result = lambda r: asyncio.create_task(broadcast({"type": "interrogation_result", "result":  r}))
 manager.on_switch_progress      = lambda m: asyncio.create_task(broadcast({"type": "switch_progress",       "message": m}))
 manager.on_switch_done          = lambda r: asyncio.create_task(broadcast({"type": "switch_done",           "result":  r}))
+manager.on_devices_list         = lambda l: asyncio.create_task(broadcast({"type": "devices_list", "devices": l}))
+manager.on_status               = lambda s: asyncio.create_task(broadcast({"type": "status",       "status":  s}))
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    await manager.connect_to_bridge()
     print("[Server] Ready at http://localhost:8000")
     yield
     await manager.disconnect()
@@ -350,11 +353,9 @@ async def websocket_endpoint(ws: WebSocket):
     await ws.accept()
     connections.append(ws)
     print(f"[WS] Browser connected ({len(connections)} total)")
-    await ws.send_text(json.dumps({
-        "type":    "init",
-        "devices": manager.get_devices(),
-        "status":  manager.get_status(),
-    }))
+    await ws.send_text(json.dumps({"type": "init"}))
+    await manager.get_devices()  # result broadcasts via on_devices_list
+    await manager.get_status()   # result broadcasts via on_status
 
     async def heartbeat():
         while True:
@@ -444,6 +445,12 @@ async def get_collection(patient_id: int):
         ]
     }
 
+print(f"[DEBUG] cwd: {os.getcwd()}")
+print(f"[DEBUG] files in cwd: {os.listdir('.')}")
+print(f"[DEBUG] game path exists: {os.path.exists('games/FishingGame/index.html')}")
+
+if os.path.exists("games/FishingGame/index.html"):
+    app.mount("/FishingGame", StaticFiles(directory="games/FishingGame", html=True), name="fishing")
 if os.path.exists("games/FishingGame/index.html"):
     app.mount("/FishingGame", StaticFiles(directory="games/FishingGame", html=True), name="fishing")
 
