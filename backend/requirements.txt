@@ -1,7 +1,7 @@
 bleak
 fastapi
 uvicorn
-websockets
+websockets==13.1
 sqlalchemy
 passlib[bcrypt]
 itsdangerous
