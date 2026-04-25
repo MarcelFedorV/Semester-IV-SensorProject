@@ -36,6 +36,7 @@ var patient_id = 1
 @onready var next_button    = $UI/NextLocation
 @onready var http_locations = $HTTPRequestLocations
 @onready var http_user = $HTTPRequestUser
+@onready var music_player = $MusicPlayer
 
 var is_touching = false
 var fish_on_timer = 0.0
@@ -74,6 +75,7 @@ func _ready():
 	_setup_ui_theme()
 	_setup_location_ui()
 	_fetch_user_id()
+	music_player.play()
 	fisher.setup(screen_w, screen_h, DOCK_Y_PCT, CENTER_X_PCT)
 	fish_manager.setup(screen_w, screen_h)
 

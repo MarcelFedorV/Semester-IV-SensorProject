@@ -42,6 +42,28 @@ FISH = [
         "sprite": "carp.png",
         "location_id": 1,
     },
+    {
+        "id": 13,
+        "name": "Clownfish",
+        "rarity": "Common",
+        "depth": "mid",
+        "fact": ".",
+        "color": "#DAA520",
+        "sprite": "clownfish.png",
+        "location_id": 1,
+    },
+    {
+        "id": 17,
+        "name": "Parrotfish",
+        "rarity": "Common",
+        "depth": "mid",
+        "fact": ".",
+        "color": "#DAA520",
+        "sprite": "parrotfish.png",
+        "location_id": 1,
+    },
+    
+
 
     #  Uncommon 
     {
@@ -74,6 +96,37 @@ FISH = [
         "sprite": "catfish.png",
         "location_id": 1,
     },
+    {
+        "id": 14,
+        "name": "Barracuda",
+        "rarity": "Uncommon",
+        "depth": "mid",
+        "fact": ".",
+        "color": "#DAA520",
+        "sprite": "barracuda.png",
+        "location_id": 1,
+    },
+    {
+        "id": 18,
+        "name": "Blue tang",
+        "rarity": "Uncommon",
+        "depth": "mid",
+        "fact": ".",
+        "color": "#1552AF",
+        "sprite": "bluetang.png",
+        "location_id": 1,
+    },
+    {
+        "id": 19,
+        "name": "Blue Marlin",
+        "rarity": "Uncommon",
+        "depth": "mid",
+        "fact": ".",
+        "color": "#FA8072",
+        "sprite": "BlueMarlin.png",
+        "location_id": 1,
+    },
+
 
     # Rare 
     {
@@ -94,6 +147,16 @@ FISH = [
         "fact": "The world's longest bony fish, up to 11 meters.",
         "color": "#C0C0C0",
         "sprite": "oarfish.png",
+        "location_id": 1,
+    },
+    {
+        "id": 15,
+        "name": "Anglerfish",
+        "rarity": "Rare",
+        "depth": "deep",
+        "fact": ".",
+        "color": "#C0C0C0",
+        "sprite": "anglerfish.png",
         "location_id": 1,
     },
 
@@ -121,14 +184,25 @@ FISH = [
     {
         "id": 12,
         "name": "Alami Fish",
-        "rarity": "Common",
+        "rarity": "Legendary",
         "depth": "surface",
         "fact": "This game is bad, why is it bad?.",
         "color": "#7BC67E",
         "sprite": "AlamiFish.png",
         "location_id": 1,
     },
+    {
+        "id": 16,
+        "name": "Great White Shark",
+        "rarity": "Legendary",
+        "depth": "surface",
+        "fact": ".",
+        "color": "#7BC67E",
+        "sprite": "GreatWhite.png",
+        "location_id": 1,
+    },
 ]
+
 
 
 
@@ -165,7 +239,7 @@ MYSTERY_FISH = [
         "depth": "deep",
         "fact": "Spotted only once, by a sailor who never spoke again.",
         "color": "#FF6B6B",
-        "sprite": None,
+        "sprite": "phantom.png",
     },
     {
         "id": 104,
@@ -186,6 +260,16 @@ MYSTERY_FISH = [
         "fact": "No one has seen it and lived to tell the tale.",
         "color": "#9B59B6",
         "sprite": None,
+    },
+    {
+        "id": 106,
+        "name": "Megalodon",
+        "location_id": 5,
+        "rarity": "Location Legend",
+        "depth": "deep",
+        "fact": "Largest shark to have ever lived.",
+        "color": "#9B59B6",
+        "sprite": "megalodon.png",
     },
 ]
 
