@@ -572,10 +572,6 @@ async def check_location_complete(patient_id: int, location_id: int):
 async def get_locations():
     return {"locations": LOCATIONS}
 
-print(f"[DEBUG] cwd: {os.getcwd()}")
-print(f"[DEBUG] files in cwd: {os.listdir('.')}")
-print(f"[DEBUG] game path exists: {os.path.exists('games/FishingGame/index.html')}")
-
 if os.path.exists("games/FishingGame/index.html"):
     app.mount("/FishingGame", StaticFiles(directory="games/FishingGame", html=True), name="fishing")
 if os.path.exists("games/FishingGame/index.html"):
