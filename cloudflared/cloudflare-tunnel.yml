@@ -1,5 +1,5 @@
 tunnel: sensorproject
-credentials-file: C:\mystuff\Desktop\SoftwareEngineering\Studies\Sem4\PROJECT\Semester-IV-SensorProject\cloudflared\credentials.json
+credentials-file: ~/.cloudflared/da045698-bf9c-40b6-992b-d65caf0c61be.json
 
 ingress:
   - hostname: game.sensorproject.org
