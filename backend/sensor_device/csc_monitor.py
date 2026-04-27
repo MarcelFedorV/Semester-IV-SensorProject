@@ -34,16 +34,18 @@ async def monitor_csc(
         flags = b[0]
         changed = False
 
-        if flags & 0x01 and len(b) >= 5:
-            wheel_revs = int.from_bytes(b[1:5], "little")
+        offset = 1
+        if flags & 0x01 and len(b) >= offset + 4:
+            wheel_revs = int.from_bytes(b[offset:offset + 4], "little")
             if last_wheel_revs is None or wheel_revs != last_wheel_revs:
-                last_wheel_revs  = wheel_revs
+                last_wheel_revs = wheel_revs
                 changed = True
+            offset += 6  # 4 bytes revs + 2 bytes event time
 
-        if flags & 0x02 and len(b) >= 7:
-            crank_revs = int.from_bytes(b[5:7], "little")
+        if flags & 0x02 and len(b) >= offset + 2:
+            crank_revs = int.from_bytes(b[offset:offset + 2], "little")
             if last_crank_revs is None or crank_revs != last_crank_revs:
-                last_crank_revs  = crank_revs
+                last_crank_revs = crank_revs
                 changed = True
 
         if changed:
@@ -61,6 +63,4 @@ async def monitor_csc(
         await client.stop_notify(CSC_MEASUREMENT)
     except Exception as e:
         print(f"[CSC monitor] stopped: {e}")
-    finally:
-        on_sensor_state(False)
-        metrics.reset()
+    f

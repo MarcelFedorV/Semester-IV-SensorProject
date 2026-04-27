@@ -75,4 +75,5 @@ async def xoss_to_speed(client: BleakClient, rebooted: asyncio.Event, progress_c
     if not rebooted.is_set():
         try: await asyncio.wait_for(rebooted.wait(), timeout=5.0)
         except asyncio.TimeoutError: pass
+
     return rebooted.is_set()

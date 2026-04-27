@@ -384,6 +384,12 @@ async def handle_message(ws: WebSocket, msg: dict):
 async def serve_fishing_game(request: Request):
     if not request.session.get("user"):
         return RedirectResponse("/login", status_code=302)
+    return RedirectResponse("/FishingGame/", status_code=302)
+
+@app.get("/FishingGame/")
+async def serve_fishing_game_index(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
     return FileResponse("games/FishingGame/index.html")
 
 @app.get("/FishingGame/{path:path}")
@@ -393,29 +399,6 @@ async def serve_fishing_assets(path: str):
         return FileResponse(file_path)
     return FileResponse("games/FishingGame/index.html")
 
-@app.get("/index.js")
-async def serve_js():
-    return FileResponse("games/FishingGame/index.js")
-
-@app.get("/index.wasm")
-async def serve_wasm():
-    return FileResponse("games/FishingGame/index.wasm")
-
-@app.get("/index.pck")
-async def serve_pck():
-    return FileResponse("games/FishingGame/index.pck")
-
-@app.get("/index.png")
-async def serve_png():
-    return FileResponse("games/FishingGame/index.png")
-
-@app.get("/index.icon.png")
-async def serve_icon():
-    return FileResponse("games/FishingGame/index.icon.png")
-
-@app.get("/index.audio.worklet.js")
-async def serve_audio_worklet():
-    return FileResponse("games/FishingGame/index.audio.worklet.js")
 
 @app.post("/fish/catch")
 async def catch_fish(depth: float, patient_id: int = 1, location_id: int = 1):
@@ -492,15 +475,31 @@ async def get_locations():
     return {"locations": LOCATIONS}
 
 
+# ── Space game (auth-gated) ───────────────────────────────────────────────────
+
+@app.get("/SpaceFunk")
+async def serve_space_game(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
+    return RedirectResponse("/SpaceFunk/", status_code=302)
+
+@app.get("/SpaceFunk/")
+async def serve_space_game_index(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
+    return FileResponse("../space-game/index.html")
+
+@app.get("/SpaceFunk/{path:path}")
+async def serve_space_assets(path: str):
+    file_path = f"../space-game/{path}"
+    if os.path.exists(file_path):
+        return FileResponse(file_path)
+    return FileResponse("../space-game/index.html")
+
+
 # ── Static mounts (must come after all explicit routes) ───────────────────────
 
 app.mount("/style", StaticFiles(directory="pages/styles"), name="style")
-
-if os.path.exists("games/FishingGame/index.html"):
-    app.mount("/FishingGame", StaticFiles(directory="games/FishingGame", html=True), name="fishing")
-
-if os.path.exists("../space-game/index.html"):
-    app.mount("/SpaceFunk", StaticFiles(directory="../space-game", html=True), name="space")
 
 
 if __name__ == "__main__":

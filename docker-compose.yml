@@ -1,22 +1,13 @@
 services:
 
-  backend:
-    build:
-      context: ./backend
-      dockerfile: backend.Dockerfile
-    container_name: backend
-    ports:
-      - "8000:8000"
-    environment:
-      - DATABASE_URL=sqlite:////app/data/users.db
-      - BLE_BRIDGE_URL=ws://host.docker.internal:8765
-    depends_on:
-      database:
-        condition: service_started
-    volumes:
-    - db_data:/app/data
-    networks:
-      - app-network
+  # NOTE: The backend is NOT dockerised — it needs direct access to the host
+  # Bluetooth stack for the BLE sensor (bleak cannot reach BT from inside a
+  # container on Windows/macOS). Run it manually on the host:
+  #
+  #   cd backend && python main.py
+  #
+  # Cloudflared tunnels traffic from game.sensorproject.org → localhost:8000,
+  # so the backend just needs to be running on the host before the tunnel starts.
 
   database:
     build:
@@ -25,8 +16,6 @@ services:
     container_name: database
     volumes:
       - db_data:/app/data
-    networks:
-      - app-network
 
   cloudflared:
     image: cloudflare/cloudflared:latest
@@ -35,13 +24,10 @@ services:
     volumes:
       - ./cloudflared/docker-cloudflare-tunnel.yml:/etc/cloudflared/config.yml
       - ./cloudflared/credentials.json:/etc/cloudflared/credentials.json
-    depends_on:
-      - backend
-    networks:
-      - app-network
+    network_mode: host
 
 networks:
   app-network:
-  
+
 volumes:
   db_data:

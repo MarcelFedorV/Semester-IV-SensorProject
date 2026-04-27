@@ -92,7 +92,7 @@ func _handle_asteroid_spawning(delta: float) -> void:
 
 func _handle_asteroid_despawning() -> void:
 	for asteroid in asteroids.duplicate():
-		if not is_instance_valid(asteroid) or asteroid.position.x < player.position.x - 1200.0:
+		if not is_instance_valid(asteroid) or asteroid.position.x < player.position.x - 900.0:
 			if is_instance_valid(asteroid):
 				asteroid.queue_free()
 			asteroids.erase(asteroid)
