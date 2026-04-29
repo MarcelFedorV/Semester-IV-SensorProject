@@ -24,8 +24,13 @@ import fishing_db
 import bcrypt
 import uvicorn
 from fish_logic import pick_fish
+<<<<<<< HEAD
 from fish_data import FISH_BY_ID, FISH, LOCATIONS, MYSTERY_FISH_BY_LOCATION, LOCATIONS_BY_ID
 from ble_manager import BLEManager
+=======
+from fish_data import FISH_BY_ID, FISH
+from sensor_device import BLEManager
+>>>>>>> FishingGameSensorInt
 
 
 
@@ -35,7 +40,7 @@ app = FastAPI()
 
 
 if sys.platform == "win32":
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    asyncio.set_event_loop(asyncio.SelectorEventLoop())
 
 manager     = BLEManager()
 connections: list[WebSocket] = []
@@ -61,7 +66,17 @@ manager.on_error                = lambda m: asyncio.create_task(broadcast({"type
 manager.on_interrogation_result = lambda r: asyncio.create_task(broadcast({"type": "interrogation_result", "result":  r}))
 manager.on_switch_progress      = lambda m: asyncio.create_task(broadcast({"type": "switch_progress",       "message": m}))
 manager.on_switch_done          = lambda r: asyncio.create_task(broadcast({"type": "switch_done",           "result":  r}))
-manager.on_sensor_state = lambda active: asyncio.create_task(broadcast({"type": "sensor_state",          "active": active}))
+manager.on_sensor_state = lambda active: asyncio.create_task(broadcast({"type": "sensor_state", "active": active}))
+
+def _on_metrics(m: dict):
+    print(
+        f"[Sensor] speed={m['speed_kmh']:5.1f} km/h  "
+        f"cadence={m['cadence_rpm']:5.1f} rpm  "
+        f"distance={m['distance_m']:6.1f} m"
+    )
+    asyncio.create_task(broadcast({"type": "metrics", **m}))
+
+manager.on_metrics = _on_metrics
 
 
 @asynccontextmanager
@@ -565,5 +580,8 @@ async def get_locations():
 
 app.mount("/style", StaticFiles(directory="pages/styles"), name="style")
 
+if os.path.exists("../space-game/index.html"):
+    app.mount("/SpaceFunk", StaticFiles(directory="../space-game", html=True), name="space")
+
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=False)
+    uvicorn.run("main:app", host="localhost", port=8000, reload=False)
