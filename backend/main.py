@@ -24,13 +24,8 @@ import fishing_db
 import bcrypt
 import uvicorn
 from fish_logic import pick_fish
-<<<<<<< HEAD
 from fish_data import FISH_BY_ID, FISH, LOCATIONS, MYSTERY_FISH_BY_LOCATION, LOCATIONS_BY_ID
-from ble_manager import BLEManager
-=======
-from fish_data import FISH_BY_ID, FISH
 from sensor_device import BLEManager
->>>>>>> FishingGameSensorInt
 
 
 
