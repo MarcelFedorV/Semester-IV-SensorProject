@@ -5,7 +5,7 @@ enum State { FISHING, REELING, REVEALING }
 var catch_interval = 15.0 
 const REEL_SPEED     = 0.3
 const REEL_DECAY     = 0.15
-const WS_URL         = "ws://localhost:8000/ws"
+const WS_URL         = "wss://game.sensorproject.org/ws"
 var state         = State.FISHING
 var depth         = 0.0
 var reel_progress = 0.0
@@ -13,6 +13,13 @@ var catch_timer   = 0.0
 var is_moving     = false
 var sensor_active = false
 var _socket := WebSocketPeer.new()
+var current_speed_kmh  = 0.0
+var current_cadence    = 0.0
+var total_distance_m   = 0.0
+
+signal metrics_updated(speed, cadence, distance)
+signal achievement_unlocked(achievement)
+
 signal fish_caught
 signal state_changed(new_state)
 func _ready() -> void:
@@ -33,9 +40,19 @@ func _handle_ws_message(raw: String) -> void:
 		return
 	match msg.get("type", ""):
 		"sensor_state":
-			sensor_active = msg.get("active", false)  # ← fixed
+			sensor_active = msg.get("active", false)
 		"disconnected":
-			sensor_active = false                      # ← fixed
+			sensor_active = false
+		"metrics":
+			current_speed_kmh = msg.get("speed_kmh", 0.0)
+			current_cadence   = msg.get("cadence_rpm", 0.0)
+			total_distance_m  = msg.get("distance_m", 0.0)
+			metrics_updated.emit(current_speed_kmh, current_cadence, total_distance_m)
+		"achievements_unlocked":
+			var achievements = msg.get("achievements", [])
+			for ach in achievements:
+				achievement_unlocked.emit(ach)
+				
 func update(delta: float):
 	match state:
 		State.FISHING:

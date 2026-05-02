@@ -19,13 +19,14 @@ from starlette.middleware.sessions import SessionMiddleware
 from passlib.context import CryptContext
 from database import SessionLocal, engine, Base
 from models import User
-from fishing_models import FishCatch, FishCollection, Achievement
+from fishing_models import FishCatch, FishCollection, AchievementUnlock
 import fishing_db
 import bcrypt
 import uvicorn
 from fish_logic import pick_fish
 from fish_data import FISH_BY_ID, FISH, LOCATIONS, MYSTERY_FISH_BY_LOCATION, LOCATIONS_BY_ID
 from sensor_device import BLEManager
+from achievements import ACHIEVEMENTS, ACHIEVEMENTS_BY_ID
 
 
 
@@ -493,14 +494,20 @@ async def catch_fish(depth: float, patient_id: int = 1, location_id: int = 1):
             fish = pick_fish(depth, location_id)
 
         is_new = fishing_db.save_catch(db, patient_id, fish["id"], location_id, depth)
+        
+        # Check fishing achievements
+        caught_after = fishing_db.get_caught_ids(db, patient_id)
+        new_achievements = fishing_db.check_fishing_achievements(db, patient_id, fish, caught_after)
 
         return {
             "fish": fish,
             "new": is_new,
             "location_complete": location_complete,
+            "new_achievements": [ACHIEVEMENTS_BY_ID[a] for a in new_achievements if a in ACHIEVEMENTS_BY_ID]
         }
     finally:
         db.close()
+
 
 @app.get("/fish/collection/{patient_id}")
 async def get_collection(patient_id: int):
@@ -566,6 +573,41 @@ async def check_location_complete(patient_id: int, location_id: int):
         }
     finally:
         db.close()
+
+
+
+
+@app.post("/player/distance")
+async def update_distance(request: Request, distance_m: float, user_id: int):
+    """Called by WebSocket metrics handler to save distance."""
+    db = SessionLocal()
+    try:
+        new_achievements = fishing_db.add_distance(db, user_id, distance_m)
+        return {
+            "stats": fishing_db.get_stats(db, user_id),
+            "new_achievements": [ACHIEVEMENTS_BY_ID[a] for a in new_achievements if a in ACHIEVEMENTS_BY_ID]
+        }
+    finally:
+        db.close()
+
+
+
+
+@app.get("/player/stats/{user_id}")
+async def get_player_stats(user_id: int):
+    db = SessionLocal()
+    try:
+        unlocked_ids = fishing_db.get_unlocked_achievements(db, user_id)
+        return {
+            "stats":            fishing_db.get_stats(db, user_id),
+            "achievements":     unlocked_ids,
+            "all_achievements": ACHIEVEMENTS
+        }
+    finally:
+        db.close()
+
+
+
 
 
 @app.get("/locations")

@@ -16,7 +16,12 @@ var current_location_id = 1
 var locations = []
 var current_location_index = 0
 var patient_id = 1
+var _distance_to_save = 0.0
+var _last_saved_distance = 0.0
+var _save_timer = 0.0
+const SAVE_INTERVAL = 10.0  # save every 10 seconds
 
+@onready var http_distance = $HTTPRequestDistance
 @onready var bobber       = $Bobber
 @onready var fishing_line = $Line
 @onready var water        = $WaterSurface
@@ -37,6 +42,8 @@ var patient_id = 1
 @onready var http_locations = $HTTPRequestLocations
 @onready var http_user = $HTTPRequestUser
 @onready var music_player = $MusicPlayer
+@onready var distance_label = $UI/DistanceLabel
+@onready var achievement_popup = $UI/AchievementPopup
 
 var is_touching = false
 var fish_on_timer = 0.0
@@ -78,6 +85,10 @@ func _ready():
 	music_player.play()
 	fisher.setup(screen_w, screen_h, DOCK_Y_PCT, CENTER_X_PCT)
 	fish_manager.setup(screen_w, screen_h)
+	game_state.metrics_updated.connect(_on_metrics_updated)
+	game_state.achievement_unlocked.connect(_on_achievement_unlocked)
+	http_distance.request_completed.connect(_on_distance_saved)
+	
 
 	fishing_line.set_point_position(0, Vector2(screen_w * CENTER_X_PCT, screen_h * DOCK_Y_PCT))
 	fishing_line.set_point_position(1, Vector2(screen_w * CENTER_X_PCT, screen_h * DOCK_Y_PCT + 10))
@@ -92,6 +103,35 @@ func _ready():
 
 	status_label.text = "Tap or pedal to fish"
 
+func _on_metrics_updated(speed: float, cadence: float, distance: float):
+	distance_label.text = "🚴 %.2f km" % (distance / 1000.0)
+	_distance_to_save = distance
+
+
+func _save_distance():
+	var delta_m = _distance_to_save - _last_saved_distance
+	if delta_m <= 0:
+		return
+	_last_saved_distance = _distance_to_save
+	http_distance.request(
+		BASE_URL + "/player/distance?distance_m=%.1f&user_id=%d" % [delta_m, patient_id],
+		[],
+		HTTPClient.METHOD_POST
+	)
+
+func _on_distance_saved(_result, response_code, _headers, body):
+	if response_code != 200:
+		return
+	var json = JSON.new()
+	json.parse(body.get_string_from_utf8())
+	var data = json.get_data()
+	var new_achievements = data.get("new_achievements", [])
+	for ach in new_achievements:
+		achievement_popup.show_achievement(ach)
+
+func _on_achievement_unlocked(achievement: Dictionary):
+	achievement_popup.show_achievement(achievement)
+	
 func _on_collection_pressed():
 	get_tree().change_scene_to_file("res://scenes/collection.tscn")
 
@@ -110,6 +150,12 @@ func _process(delta):
 	fish_manager.update(delta, screen_w)
 	_update_visuals()
 	_update_status_label()
+	
+	_save_timer += delta
+	if _save_timer >= SAVE_INTERVAL:
+		_save_timer = 0.0
+		_save_distance()
+		
 	if notification_timer > 0.0:
 		notification_timer -= delta
 		notification_label.modulate.a = notification_timer / NOTIFICATION_DURATION
@@ -197,6 +243,10 @@ func _on_catch_response(_result, response_code, _headers, body):
 		sprite = ""
 	catch_reveal.show_catch(fish["name"], fish["rarity"], fish["fact"], sprite)
 	_show_notification("🐟 %s added to collection!" % fish["name"])
+	
+	var new_achievements = data.get("new_achievements", [])
+	for ach in new_achievements:
+		achievement_popup.show_achievement(ach)
 
 func _show_notification(text: String):
 	notification_label.text    = text
