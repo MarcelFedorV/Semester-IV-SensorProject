@@ -104,8 +104,10 @@ func _ready():
 	status_label.text = "Tap or pedal to fish"
 
 func _on_metrics_updated(speed: float, cadence: float, distance: float):
-	distance_label.text = "🚴 %.2f km" % (distance / 1000.0)
+	# Keep real sensor distance for server saves / achievements
 	_distance_to_save = distance
+	# In-game label uses speed × playtime, accumulated in game_state
+	distance_label.text = "🚴 %.2f km" % (game_state.played_distance_m / 1000.0)
 
 
 func _save_distance():
@@ -205,9 +207,9 @@ func _update_status_label():
 	match game_state.state:
 		GameState.State.FISHING:
 			if game_state.sensor_active:
-				status_label.text = "Pedalling - line going deeper" if game_state.is_moving else "Stop pedalling - line rising"
+				status_label.text = "%.1f km/h · depth %.0f%%" % [game_state.current_speed_kmh, game_state.depth * 100]
 			else:
-				status_label.text = "Moving - line going deeper" if game_state.is_moving else "Tap or pedal to fish"
+				status_label.text = "Tap or pedal to fish"
 		GameState.State.REELING:
 			status_label.text = "Reeling... %.0f%%" % (game_state.reel_progress * 100)
 		GameState.State.REVEALING:
