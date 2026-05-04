@@ -9,11 +9,18 @@ font_size = 40
 
 [node name="Game" type="Node2D" unique_id=1940250587]
 
-[node name="Player" parent="." unique_id=1798227887 node_paths=PackedStringArray("camera", "fuel_label", "hp_label", "score_label") instance=ExtResource("1_6igcf")]
+[node name="Player" parent="." unique_id=1798227887 node_paths=PackedStringArray("camera", "fuel_label", "hp_label", "score_label", "distance_label", "http_user", "http_score") instance=ExtResource("1_6igcf")]
 camera = NodePath("../Camera2D")
 fuel_label = NodePath("../CanvasLayer/Label")
 hp_label = NodePath("../CanvasLayer/Label2")
 score_label = NodePath("../CanvasLayer/Label3")
+distance_label = NodePath("../CanvasLayer/Label4")
+http_user = NodePath("HTTPRequestUser")
+http_score = NodePath("HTTPRequestScore")
+
+[node name="HTTPRequestUser" type="HTTPRequest" parent="Player" unique_id=2147300149]
+
+[node name="HTTPRequestScore" type="HTTPRequest" parent="Player" unique_id=1122076755]
 
 [node name="ColorRect" type="ColorRect" parent="." unique_id=142869882]
 visible = false
@@ -39,25 +46,38 @@ position = Vector2(-300, 0)
 layer = 13
 
 [node name="Label" type="Label" parent="CanvasLayer" unique_id=247038873]
-offset_left = 1014.0
-offset_top = 35.0
-offset_right = 1249.0
-offset_bottom = 111.0
+offset_left = 1042.0
+offset_top = 33.0
+offset_right = 1277.0
+offset_bottom = 109.0
+scale = Vector2(0.5614678, 0.5614678)
 text = "Fuel: 100"
 label_settings = SubResource("LabelSettings_mopgc")
 
 [node name="Label2" type="Label" parent="CanvasLayer" unique_id=891246137]
-offset_left = 1014.0
-offset_top = 82.0
-offset_right = 1249.0
-offset_bottom = 158.0
+offset_left = 1042.0
+offset_top = 80.0
+offset_right = 1277.0
+offset_bottom = 156.0
+scale = Vector2(0.5614678, 0.5614678)
 text = "Lives: 3"
 label_settings = SubResource("LabelSettings_mopgc")
 
 [node name="Label3" type="Label" parent="CanvasLayer" unique_id=1789696741]
-offset_left = 1014.0
-offset_top = 129.0
-offset_right = 1249.0
-offset_bottom = 205.0
+offset_left = 1042.0
+offset_top = 127.0
+offset_right = 1277.0
+offset_bottom = 203.0
+scale = Vector2(0.5614678, 0.5614678)
 text = "Score:"
+label_settings = SubResource("LabelSettings_mopgc")
+
+[node name="Label4" type="Label" parent="CanvasLayer" unique_id=119734741]
+offset_left = 1042.0
+offset_top = 175.0
+offset_right = 1302.0
+offset_bottom = 288.0
+scale = Vector2(0.5614678, 0.5614678)
+text = "Traveled:
+"
 label_settings = SubResource("LabelSettings_mopgc")

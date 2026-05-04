@@ -63,4 +63,3 @@ async def monitor_csc(
         await client.stop_notify(CSC_MEASUREMENT)
     except Exception as e:
         print(f"[CSC monitor] stopped: {e}")
-    f
