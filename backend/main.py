@@ -23,11 +23,10 @@ from fishing_models import FishCatch, FishCollection, AchievementUnlock
 import fishing_db
 import bcrypt
 import uvicorn
-from fish_logic import pick_fish
 from fish_data import FISH_BY_ID, FISH, LOCATIONS, MYSTERY_FISH_BY_LOCATION, LOCATIONS_BY_ID
 from sensor_device import BLEManager
 from achievements import ACHIEVEMENTS, ACHIEVEMENTS_BY_ID
-
+from fish_agent import FishAgent
 
 
 
@@ -482,32 +481,50 @@ async def get_me(request: Request):
 async def catch_fish(depth: float, patient_id: int = 1, location_id: int = 1):
     db = SessionLocal()
     try:
+        # Unified FishAgent system: each agent decides if it catches
         caught = fishing_db.get_caught_ids(db, patient_id)
         location_fish = [f for f in FISH if f["location_id"] == location_id]
         location_fish_ids = {f["id"] for f in location_fish}
         location_complete = location_fish_ids.issubset(caught) if location_fish_ids else False
 
-        if location_complete and random.random() < 0.3:
+        # Check if we should try a mystery fish
+        use_mystery = location_complete and random.random() < 0.3
+        if use_mystery:
             mystery = MYSTERY_FISH_BY_LOCATION.get(location_id)
-            fish = mystery if mystery else pick_fish(depth, location_id)
+            pool = [mystery] if mystery else location_fish
         else:
-            fish = pick_fish(depth, location_id)
+            pool = location_fish if location_fish else FISH
 
-        is_new = fishing_db.save_catch(db, patient_id, fish["id"], location_id, depth)
-        
-        # Check fishing achievements
+        # Try each fish in pool — first one that catches wins
+        random.shuffle(pool)
+        caught_fish = None
+        for fish in pool:
+            agent = FishAgent(fish)
+            result = agent.run(depth, location_id)
+            if result["caught"]:
+                caught_fish = fish
+                break
+
+        if not caught_fish:
+            return {
+                "fish": None,
+                "missed": True,
+                "new_achievements": []
+            }
+
+        is_new = fishing_db.save_catch(db, patient_id, caught_fish["id"], location_id, depth)
         caught_after = fishing_db.get_caught_ids(db, patient_id)
-        new_achievements = fishing_db.check_fishing_achievements(db, patient_id, fish, caught_after)
+        new_achievements = fishing_db.check_fishing_achievements(db, patient_id, caught_fish, caught_after)
 
         return {
-            "fish": fish,
+            "fish": caught_fish,
             "new": is_new,
+            "missed": False,
             "location_complete": location_complete,
             "new_achievements": [ACHIEVEMENTS_BY_ID[a] for a in new_achievements if a in ACHIEVEMENTS_BY_ID]
         }
     finally:
         db.close()
-
 
 @app.get("/fish/collection/{patient_id}")
 async def get_collection(patient_id: int):

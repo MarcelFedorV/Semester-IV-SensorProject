@@ -10,7 +10,7 @@
 [ext_resource type="Script" uid="uid://tip82porhkaa" path="res://scripts/game-state.gd" id="5_o6xl0"]
 [ext_resource type="Script" uid="uid://7wfkomiq0872" path="res://scripts/achievement_popup.gd" id="6_ya4ey"]
 [ext_resource type="Texture2D" uid="uid://c575xaru6kmln" path="res://assets/boat.png" id="8_tipki"]
-[ext_resource type="AudioStream" uid="uid://bvmipco3x1824" path="res://assets/audio/music_main.mp3" id="10_choun"]
+[ext_resource type="AudioStream" uid="uid://lriwavlte1iv" path="res://assets/audio/music_main.ogg" id="11_ya4ey"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_tefeu"]
 shader = ExtResource("2_tefeu")
@@ -208,8 +208,7 @@ stretch_mode = 5
 [node name="HTTPRequestUser" type="HTTPRequest" parent="." unique_id=294828330]
 
 [node name="MusicPlayer" type="AudioStreamPlayer" parent="." unique_id=66432737]
-stream = ExtResource("10_choun")
-volume_db = -10.673
-autoplay = true
+stream = ExtResource("11_ya4ey")
+volume_db = -9.509
 
 [node name="HTTPRequestDistance" type="HTTPRequest" parent="." unique_id=1865498101]

@@ -52,8 +52,11 @@ func _process(delta: float) -> void:
 				_socket.connect_to_url(_get_ws_url())
 
 func _handle_ws_message(raw: String) -> void:
-	var msg: Dictionary = JSON.parse_string(raw)
-	if msg == null:
+	var parse_result = JSON.parse_string(raw)
+	if parse_result.error != OK:
+		return
+	var msg: Dictionary = parse_result.result
+	if typeof(msg) != TYPE_DICTIONARY:
 		return
 	match msg.get("type", ""):
 		"sensor_state":

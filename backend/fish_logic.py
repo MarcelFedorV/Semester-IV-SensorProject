@@ -1,4 +1,5 @@
 from fish_data import FISH_BY_RARITY, FISH, LOCATIONS, LOCATIONS_BY_ID
+from fish_agent import FishAgent
 import random
 
 RARITY_WEIGHTS_BY_DEPTH = {
@@ -25,7 +26,6 @@ def pick_fish(depth: float, location_id: int = 1) -> dict:
     zone   = depth_to_zone(depth)
     rarity = pick_rarity(zone)
 
-    # Filter fish by location and rarity
     zone_order = ["surface", "mid", "deep"]
     max_index  = zone_order.index(zone)
 
@@ -36,12 +36,27 @@ def pick_fish(depth: float, location_id: int = 1) -> dict:
         and zone_order.index(f["depth"]) <= max_index
     ]
 
-    # Fallback — ignore location if no fish found
     if not pool:
         pool = [f for f in FISH if f["rarity"] == rarity]
-
-    # Final fallback
     if not pool:
         pool = FISH
 
-    return random.choice(pool)
+    # Agent scores each fish — higher score = more likely to bite
+    scored = []
+    for fish in pool:
+        agent   = FishAgent(fish)
+        result  = agent.run(depth, location_id)
+        # bite=3, nibble=2, ignore=1, flee=0
+        weights = {"bite": 3, "nibble": 2, "ignore": 1, "flee": 0}
+        score   = weights.get(result["action"], 1)
+        scored.append((fish, score))
+
+    # Weighted random pick based on agent scores
+    fish_list   = [f for f, _ in scored]
+    score_list  = [s for _, s in scored]
+
+    # If all scored 0, fall back to equal weights
+    if sum(score_list) == 0:
+        score_list = [1] * len(fish_list)
+
+    return random.choices(fish_list, weights=score_list, k=1)[0]

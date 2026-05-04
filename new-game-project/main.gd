@@ -238,14 +238,20 @@ func _on_catch_response(_result, response_code, _headers, body):
 	var json = JSON.new()
 	json.parse(body.get_string_from_utf8())
 	var data = json.get_data()
-	var fish = data["fish"]
 
+	if data.get("missed", false):
+		_show_notification("🐟 The fish got away!")
+		game_state.reset()
+		status_label.text = "Tap or pedal to fish"
+		return
+
+	var fish = data["fish"]
 	var sprite = fish.get("sprite", "")
 	if sprite == null:
 		sprite = ""
 	catch_reveal.show_catch(fish["name"], fish["rarity"], fish["fact"], sprite)
 	_show_notification("🐟 %s added to collection!" % fish["name"])
-	
+
 	var new_achievements = data.get("new_achievements", [])
 	for ach in new_achievements:
 		achievement_popup.show_achievement(ach)
@@ -265,6 +271,10 @@ func _on_state_changed(new_state):
 		_show_fish_on()
 
 func _input(event):
+	# Start music on first interaction
+	if not music_player.playing:
+		music_player.play()
+
 	if event is InputEventScreenTouch:
 		if event.pressed:
 			var clicked = get_viewport().gui_get_focus_owner()
@@ -282,6 +292,10 @@ func _input(event):
 		else:
 			is_touching = false
 
+	if event is InputEventScreenDrag or event is InputEventMouseMotion:
+		if not music_player.playing:
+			music_player.play()
+			
 func _notification(what):
 	if what == NOTIFICATION_WM_SIZE_CHANGED:
 		var vp   = get_viewport().get_visible_rect().size
