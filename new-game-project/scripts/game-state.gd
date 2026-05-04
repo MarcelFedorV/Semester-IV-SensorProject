@@ -5,7 +5,8 @@ enum State { FISHING, REELING, REVEALING }
 const REEL_SPEED              = 0.3
 const REEL_DECAY              = 0.15
 const DEPTH_SPEED_MAX_KMH     = 20.0  # speed at which bobber is at full depth
-var _catch_distance_m: float  = 150.0  # meters between catches (randomised)
+const MANUAL_MOVE_SPEED_MPS   = 3.0   # fallback movement speed for clicks/touches
+var _catch_distance_m: float  = 100.0  # meters between catches (randomised)
 var _last_catch_distance_m: float = 0.0
 const WS_URL_LOCAL        = "ws://localhost:8000/ws"
 const WS_URL_PROD         = "wss://game.sensorproject.org/ws"
@@ -77,11 +78,14 @@ func update(delta: float):
 	# Accumulate in-game distance from speed × time while pedalling
 	if sensor_active:
 		played_distance_m += (current_speed_kmh / 3.6) * delta
+	elif is_moving:
+		played_distance_m += MANUAL_MOVE_SPEED_MPS * delta
+		total_distance_m += MANUAL_MOVE_SPEED_MPS * delta
 
 	match state:
 		State.FISHING:
-			# Depth driven by speed — faster pedalling = deeper bobber
-			var speed_target = clamp(current_speed_kmh / DEPTH_SPEED_MAX_KMH, 0.0, 1.0) if sensor_active else 0.0
+			# Depth driven by speed, or manual tap/click movement when sensor is inactive
+			var speed_target = clamp(current_speed_kmh / DEPTH_SPEED_MAX_KMH, 0.0, 1.0) if sensor_active else (0.5 if is_moving else 0.0)
 			depth = lerp(depth, speed_target, delta * 0.5)
 			# Catch triggered by distance travelled, not time
 			var dist_traveled = total_distance_m - _last_catch_distance_m
