@@ -1,2 +1,2 @@
-backend/games/FishingGame/*
-!backend/games/FishingGame/.gitkeep
+echo "__pycache__/" >> .gitignore
+echo "*.pyc" >> .gitignorebackend/cloudflare.tunnel.yml

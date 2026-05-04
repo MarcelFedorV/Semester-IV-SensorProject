@@ -1,7 +1,42 @@
-To install:
--bleak
--fastapi
--uvicorn
--websockets
+## Setup
 
-just run the main file
+Install Python dependencies:
+
+    pip install bleak fastapi uvicorn websockets sqlalchemy passlib[bcrypt] itsdangerous jinja2 python-multipart
+
+## Running the project
+
+The backend runs directly on the host (NOT in Docker) because the BLE sensor
+requires direct access to the system Bluetooth stack — bleak cannot reach
+Bluetooth from inside a container on Windows/macOS.
+
+1. Start the backend on the host:
+
+       cd backend
+       python main.py
+
+   Server starts at http://localhost:8000
+
+2. In another terminal, start the database container + Cloudflare tunnel:
+
+       docker-compose up --build
+
+   This starts:
+   - SQLite database container (volume-mounted at /app/data/users.db)
+   - Cloudflare tunnel: game.sensorproject.org → localhost:8000
+
+## Architecture
+
+    Browser / Godot game
+        ↕  WebSocket /ws
+    backend/main.py   (FastAPI, runs on host)
+        ↕  BLE via bleak (direct host Bluetooth)
+    Cycling sensor (XOSS / compatible CSC device)
+
+    Cloudflare tunnel → localhost:8000  (remote / mobile access)
+
+## Games
+
+- Fishing game:  http://localhost:8000/FishingGame
+- Space game:    http://localhost:8000/SpaceFunk
+- BLE control:   http://localhost:8000/ble

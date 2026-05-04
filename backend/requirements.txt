@@ -1,0 +1,9 @@
+bleak
+fastapi
+uvicorn
+websockets==13.1
+sqlalchemy
+passlib[bcrypt]
+itsdangerous
+jinja2
+python-multipart

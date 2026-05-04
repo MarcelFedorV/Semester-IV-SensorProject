@@ -1,19 +1,34 @@
 [gd_scene format=3 uid="uid://c5744s7byhirb"]
 
 [ext_resource type="Script" uid="uid://bi3heij1uscrg" path="res://main.gd" id="1_o5qli"]
+[ext_resource type="Script" uid="uid://dbayv2qrv4hgp" path="res://scripts/fisher.gd" id="2_0wfyh"]
+[ext_resource type="Script" uid="uid://dg6vnt0xdbe4w" path="res://scripts/catch_reveal.gd" id="2_tbgi4"]
+[ext_resource type="Shader" uid="uid://dln53l0dbjugd" path="res://scenes/main.gdshader" id="2_tefeu"]
+[ext_resource type="Texture2D" uid="uid://c4otgls2xurre" path="res://assets/sky.png" id="2_tipki"]
+[ext_resource type="Texture2D" uid="uid://571kxcx3a2sw" path="res://assets/bobber.png" id="4_85g3d"]
+[ext_resource type="Script" uid="uid://dvu4xtx314dxx" path="res://scripts/fish_manager.gd" id="4_tefeu"]
+[ext_resource type="Script" uid="uid://tip82porhkaa" path="res://scripts/game-state.gd" id="5_o6xl0"]
+[ext_resource type="Texture2D" uid="uid://c575xaru6kmln" path="res://assets/boat.png" id="8_tipki"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_tefeu"]
+shader = ExtResource("2_tefeu")
+shader_parameter/surface_color = Vector3(0.05, 0.28, 0.52)
+shader_parameter/deep_color = Vector3(0.01, 0.05, 0.12)
 
 [node name="Main" type="Node2D" unique_id=1390537299]
 script = ExtResource("1_o5qli")
 
-[node name="Background" type="ColorRect" parent="." unique_id=2078241678]
+[node name="Background" type="TextureRect" parent="." unique_id=758614285]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.005898415, 0.002855174, 0.0017368245, 1)
+texture = ExtResource("2_tipki")
+expand_mode = 1
 
 [node name="WaterSurface" type="ColorRect" parent="." unique_id=895825666]
+material = SubResource("ShaderMaterial_tefeu")
 custom_minimum_size = Vector2(390, 544)
 anchors_preset = 15
 anchor_right = 1.0
@@ -26,14 +41,15 @@ grow_vertical = 2
 color = Color(0.16047382, 0.19730252, 0.7650473, 1)
 
 [node name="Line" type="Line2D" parent="." unique_id=1364468247]
-position = Vector2(362, 210)
-points = PackedVector2Array(195, 100, 195, 300)
+points = PackedVector2Array(195, 100, 195, 100)
 width = 2.0
 
-[node name="Bobber" type="ColorRect" parent="." unique_id=264317558]
+[node name="Bobber" type="TextureRect" parent="." unique_id=609490977]
 offset_right = 20.0
 offset_bottom = 20.0
-color = Color(0.7215217, 0.15755391, 0.1911807, 1)
+texture = ExtResource("4_85g3d")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="UI" type="CanvasLayer" parent="." unique_id=551231151]
 
@@ -78,6 +94,7 @@ offset_right = 20.0
 offset_bottom = 25.0
 grow_horizontal = 2
 grow_vertical = 2
+script = ExtResource("2_tbgi4")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="UI/CatchReveal" unique_id=1316964738]
 layout_mode = 2
@@ -90,4 +107,73 @@ autowrap_mode = 2
 layout_mode = 2
 autowrap_mode = 2
 
+[node name="FishSprite" type="TextureRect" parent="UI/CatchReveal/VBoxContainer" unique_id=1292436185]
+custom_minimum_size = Vector2(0, 200)
+layout_mode = 2
+expand_mode = 3
+stretch_mode = 5
+
+[node name="CollectionButton" type="Button" parent="UI" unique_id=1941556861]
+offset_left = 270.0
+offset_top = 20.0
+offset_right = 380.0
+offset_bottom = 60.0
+text = "Collection"
+
+[node name="NotificationLabel" type="Label" parent="UI" unique_id=2046192287]
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="FishOnLabel" type="Label" parent="UI" unique_id=109493318]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -34.0
+offset_top = -11.5
+offset_right = 34.0
+offset_bottom = 11.5
+grow_horizontal = 2
+grow_vertical = 2
+text = "FISH ON!"
+
+[node name="LocationLabel" type="Label" parent="UI" unique_id=1933755505]
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="PrevLocation" type="Button" parent="UI" unique_id=914869858]
+offset_right = 8.0
+offset_bottom = 8.0
+
+[node name="NextLocation" type="Button" parent="UI" unique_id=638358448]
+offset_right = 8.0
+offset_bottom = 8.0
+
 [node name="WebSocket" type="Node" parent="." unique_id=1092900758]
+
+[node name="Fisher" type="Node2D" parent="." unique_id=1564531806]
+script = ExtResource("2_0wfyh")
+metadata/_custom_type_script = "uid://dbayv2qrv4hgp"
+
+[node name="FishManager" type="Node2D" parent="." unique_id=254948210]
+script = ExtResource("4_tefeu")
+metadata/_custom_type_script = "uid://dvu4xtx314dxx"
+
+[node name="GameState" type="Node" parent="." unique_id=1377532169]
+script = ExtResource("5_o6xl0")
+metadata/_custom_type_script = "uid://tip82porhkaa"
+
+[node name="HTTPRequest" type="HTTPRequest" parent="." unique_id=101344467]
+
+[node name="Boat" type="TextureRect" parent="." unique_id=1415250888]
+offset_right = 40.0
+offset_bottom = 40.0
+texture = ExtResource("8_tipki")
+expand_mode = 3
+stretch_mode = 5
+
+[node name="HTTPRequestLocations" type="HTTPRequest" parent="." unique_id=1408988133]
+
+[node name="HTTPRequestUser" type="HTTPRequest" parent="." unique_id=294828330]

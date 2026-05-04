@@ -4,12 +4,13 @@
 [ext_resource type="Texture2D" uid="uid://l1yqtfhlxgee" path="res://Scene/RockF.png" id="2_yvc6s"]
 
 [node name="Asteroid" type="Area2D" unique_id=1882189023 groups=["asteroid"]]
-z_index = 20
+z_index = 40
 collision_layer = 3
 collision_mask = 3
 script = ExtResource("1_yvc6s")
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=3944807 groups=["asteroid"]]
+z_index = 20
 position = Vector2(392, 221.00003)
 scale = Vector2(0.5527343, 0.5527343)
 texture = ExtResource("2_yvc6s")

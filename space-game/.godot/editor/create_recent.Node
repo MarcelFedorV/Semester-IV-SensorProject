@@ -1,0 +1,14 @@
+CanvasLayer
+CanvasGroup
+Label
+Area2D
+Node2D
+Sprite2D
+CollisionShape2D
+StaticBody2D
+TouchScreenButton
+CollisionPolygon2D
+TextureRect
+Polygon2D
+Control
+Camera2D

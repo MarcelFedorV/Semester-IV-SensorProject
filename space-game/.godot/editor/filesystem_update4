@@ -1,0 +1,7 @@
+res://Scene/Game.tscn
+res://Scripts/LevelGenerator.gd
+res://Scripts/Player.gd
+res://Scene/Asteroid.tscn
+res://Scripts/Asteroid.gd
+res://Scene/player.tscn
+res://Scripts/Bullet.gd

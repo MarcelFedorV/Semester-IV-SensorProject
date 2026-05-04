@@ -8,17 +8,28 @@ import os
 import asyncio
 import json
 import sys
+import random
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Depends, Form
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi.templating import Jinja2Templates
+from starlette.middleware.sessions import SessionMiddleware
+from passlib.context import CryptContext
+from database import SessionLocal, engine, Base
+from models import User
+from fishing_models import FishCatch, FishCollection, Achievement
+import fishing_db
+import bcrypt
 import uvicorn
+from fish_logic import pick_fish
+from fish_data import FISH_BY_ID, FISH, LOCATIONS, MYSTERY_FISH_BY_LOCATION, LOCATIONS_BY_ID
+from sensor_device import BLEManager
 
-from ble_manager import BLEManager
 
 if sys.platform == "win32":
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    asyncio.set_event_loop(asyncio.SelectorEventLoop())
 
 manager     = BLEManager()
 connections: list[WebSocket] = []
@@ -44,6 +55,17 @@ manager.on_error                = lambda m: asyncio.create_task(broadcast({"type
 manager.on_interrogation_result = lambda r: asyncio.create_task(broadcast({"type": "interrogation_result", "result":  r}))
 manager.on_switch_progress      = lambda m: asyncio.create_task(broadcast({"type": "switch_progress",       "message": m}))
 manager.on_switch_done          = lambda r: asyncio.create_task(broadcast({"type": "switch_done",           "result":  r}))
+manager.on_sensor_state         = lambda active: asyncio.create_task(broadcast({"type": "sensor_state", "active": active}))
+
+def _on_metrics(m: dict):
+    print(
+        f"[Sensor] speed={m['speed_kmh']:5.1f} km/h  "
+        f"cadence={m['cadence_rpm']:5.1f} rpm  "
+        f"distance={m['distance_m']:6.1f} m"
+    )
+    asyncio.create_task(broadcast({"type": "metrics", **m}))
+
+manager.on_metrics = _on_metrics
 
 
 @asynccontextmanager
@@ -61,15 +83,239 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 app = FastAPI(lifespan=lifespan)
+
+Base.metadata.create_all(bind=engine)
+app.add_middleware(SessionMiddleware, secret_key="your-secret-key-change-this")
 app.add_middleware(SecurityHeadersMiddleware)
 
+templates = Jinja2Templates(directory="pages")
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# --- Auth helpers ---
+def get_current_user(request: Request):
+    return request.session.get("user")
+
+def require_auth(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
+    return None
+
+
+# ── Pages ─────────────────────────────────────────────────────────────────────
+
 @app.get("/")
-async def serve_frontend():
+async def serve_welcome(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
+    return FileResponse("pages/welcome.html")
+
+@app.get("/login")
+async def login_page(request: Request):
+    return templates.TemplateResponse(request=request, name="login.html", context={"error": None})
+
+@app.post("/login")
+async def login(request: Request, username: str = Form(...), password: str = Form(...)):
+    db = SessionLocal()
+    user = db.query(User).filter(User.username == username).first()
+    db.close()
+    if not user or not bcrypt.checkpw(password.encode("utf-8"), user.password.encode("utf-8")):
+        return RedirectResponse("/login", status_code=302)
+    request.session["user"] = user.username
+    return RedirectResponse("/", status_code=302)
+
+@app.post("/register")
+async def register(request: Request, username: str = Form(...), password: str = Form(...)):
+    db = SessionLocal()
+    if db.query(User).filter(User.username == username).first():
+        db.close()
+        return {"detail": "Username already exists"}, 400
+    hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
+    user = User(username=username, password=hashed.decode("utf-8"))
+    db.add(user)
+    db.commit()
+    db.close()
+    return {"message": "User created successfully"}
+
+@app.get("/logout")
+async def logout(request: Request):
+    request.session.clear()
+    return RedirectResponse("/login", status_code=302)
+
+@app.get("/account")
+async def account_page(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
+    return FileResponse("pages/account.html")
+
+@app.get("/ble")
+async def serve_ble(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
     return FileResponse("index.html")
 
+@app.get("/developers")
+async def serve_dev(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
+    return FileResponse("pages/developers.html")
+
+@app.get("/frontpage")
+async def serve_frontpage(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
+    return FileResponse("pages/frontpage.html")
+
+@app.get("/metrics")
+async def serve_metrics(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
+    return FileResponse("pages/metrics.html")
+
 @app.get("/Start")
-def landing():
+async def landing(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
     return FileResponse("Start.html")
+
+
+# ── Admin ─────────────────────────────────────────────────────────────────────
+
+@app.get("/admin/login")
+async def admin_login_page(request: Request):
+    if request.session.get("admin"):
+        return RedirectResponse("/admin/dashboard", status_code=302)
+    return FileResponse("pages/admin_login.html")
+
+@app.post("/admin/login")
+async def admin_login(request: Request, username: str = Form(...), password: str = Form(...)):
+    db = SessionLocal()
+    user = db.query(User).filter(User.username == username).first()
+    db.close()
+    if not user or user.role != "admin" or not bcrypt.checkpw(password.encode("utf-8"), user.password.encode("utf-8")):
+        return RedirectResponse("/admin/login", status_code=302)
+    request.session["admin"] = user.username
+    request.session["user"] = user.username
+    return RedirectResponse("/admin/dashboard", status_code=302)
+
+@app.get("/admin/dashboard")
+async def admin_dashboard(request: Request):
+    if not request.session.get("admin"):
+        return RedirectResponse("/admin/login", status_code=302)
+    return FileResponse("pages/admin_dashboard.html")
+
+@app.get("/admin/logout")
+async def admin_logout(request: Request):
+    request.session.clear()
+    return RedirectResponse("/admin/login", status_code=302)
+
+
+# ── API ───────────────────────────────────────────────────────────────────────
+
+@app.get("/api/check-auth")
+async def check_auth(request: Request):
+    user = request.session.get("user")
+    return {"authenticated": user is not None, "user": user}
+
+@app.get("/api/me")
+async def get_me(request: Request):
+    username = request.session.get("user")
+    if not username:
+        return {"detail": "Not authenticated"}, 401
+    db = SessionLocal()
+    user = db.query(User).filter(User.username == username).first()
+    db.close()
+    if not user:
+        return {"detail": "Not found"}, 404
+    return {"id": user.id, "username": user.username}
+
+@app.get("/api/user")
+async def get_user(request: Request):
+    username = request.session.get("user")
+    if not username:
+        return {"detail": "Not authenticated"}, 401
+    db = SessionLocal()
+    user = db.query(User).filter(User.username == username).first()
+    db.close()
+    if not user:
+        return {"detail": "User not found"}, 404
+    return {
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "bio": user.bio,
+        "age": user.age,
+        "favorite_game": user.favorite_game,
+        "role": user.role,
+    }
+
+@app.put("/api/user")
+async def update_user(request: Request):
+    username = request.session.get("user")
+    if not username:
+        return {"detail": "Not authenticated"}, 401
+    data = await request.json()
+    db = SessionLocal()
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        db.close()
+        return {"detail": "User not found"}, 404
+    for field in ("email", "bio", "age", "favorite_game"):
+        if field in data:
+            setattr(user, field, data[field])
+    db.commit()
+    db.close()
+    return {"message": "User updated successfully"}
+
+@app.get("/api/check-admin")
+async def check_admin(request: Request):
+    admin = request.session.get("admin")
+    return {"authenticated": admin is not None, "is_admin": admin is not None, "user": request.session.get("user")}
+
+@app.get("/api/admin/users")
+async def get_all_users(request: Request):
+    if not request.session.get("admin"):
+        return {"detail": "Unauthorized"}, 401
+    db = SessionLocal()
+    users = db.query(User).all()
+    db.close()
+    return {"users": [{"id": u.id, "username": u.username, "email": u.email, "role": u.role} for u in users]}
+
+@app.post("/api/admin/create-user")
+async def admin_create_user(request: Request, username: str = Form(...), password: str = Form(...), email: str = Form(None), role: str = Form("user")):
+    if not request.session.get("admin"):
+        return {"detail": "Unauthorized"}, 401
+    if role not in ["user", "admin"]:
+        return {"detail": "Invalid role"}, 400
+    db = SessionLocal()
+    if db.query(User).filter(User.username == username).first():
+        db.close()
+        return {"detail": "Username already exists"}, 400
+    hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
+    user = User(username=username, password=hashed.decode("utf-8"), email=email or None, role=role)
+    db.add(user)
+    db.commit()
+    db.close()
+    return {"message": "User created successfully"}
+
+@app.delete("/api/admin/users/{user_id}")
+async def admin_delete_user(request: Request, user_id: int):
+    if not request.session.get("admin"):
+        return {"detail": "Unauthorized"}, 401
+    db = SessionLocal()
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        db.close()
+        return {"detail": "User not found"}, 404
+    if user.role == "admin":
+        db.close()
+        return {"detail": "Cannot delete admin users"}, 403
+    db.delete(user)
+    db.commit()
+    db.close()
+    return {"message": "User deleted successfully"}
+
+
+# ── WebSocket ─────────────────────────────────────────────────────────────────
 
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
@@ -91,7 +337,7 @@ async def websocket_endpoint(ws: WebSocket):
                 break
 
     heartbeat_task = asyncio.create_task(heartbeat())
-    
+
     try:
         while True:
             raw = await ws.receive_text()
@@ -111,26 +357,20 @@ async def handle_message(ws: WebSocket, msg: dict):
 
     if action == "scan":
         asyncio.create_task(manager.start_scan(duration=float(msg.get("duration", 8.0))))
-
     elif action == "scan_continuous":
         asyncio.create_task(manager.start_scan_continuous())
-
     elif action == "stop_scan":
         await manager.stop_scan()
-
     elif action == "clear":
         manager.clear_devices()
         await broadcast({"type": "cleared"})
-
     elif action == "connect":
         address = msg.get("address")
         if address:
             asyncio.create_task(manager.connect_and_interrogate(address))
             await broadcast({"type": "connecting", "address": address})
-
     elif action == "disconnect":
         await manager.disconnect()
-
     elif action == "mode_switch":
         address      = msg.get("address")
         current_mode = msg.get("current_mode")
@@ -138,14 +378,129 @@ async def handle_message(ws: WebSocket, msg: dict):
             asyncio.create_task(manager.do_mode_switch(address, current_mode))
 
 
-if os.path.exists("games/FishingGame/index.html"):
-    app.mount("/FishingGame", StaticFiles(directory="games/FishingGame", html=True), name="fishing")
+# ── Fishing game ──────────────────────────────────────────────────────────────
 
-SPACE_GAME_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "space-game")
+@app.get("/FishingGame")
+async def serve_fishing_game(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
+    return RedirectResponse("/FishingGame/", status_code=302)
 
-if os.path.exists(SPACE_GAME_DIR):
-    app.mount("/SpaceGame", StaticFiles(directory=SPACE_GAME_DIR, html=True), name="spacegame")
+@app.get("/FishingGame/")
+async def serve_fishing_game_index(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
+    return FileResponse("games/FishingGame/index.html")
+
+@app.get("/FishingGame/{path:path}")
+async def serve_fishing_assets(path: str):
+    file_path = f"games/FishingGame/{path}"
+    if os.path.exists(file_path):
+        return FileResponse(file_path)
+    return FileResponse("games/FishingGame/index.html")
+
+
+@app.post("/fish/catch")
+async def catch_fish(depth: float, patient_id: int = 1, location_id: int = 1):
+    db = SessionLocal()
+    try:
+        caught = fishing_db.get_caught_ids(db, patient_id)
+        location_fish = [f for f in FISH if f["location_id"] == location_id]
+        location_fish_ids = {f["id"] for f in location_fish}
+        location_complete = location_fish_ids.issubset(caught) if location_fish_ids else False
+
+        if location_complete and random.random() < 0.3:
+            mystery = MYSTERY_FISH_BY_LOCATION.get(location_id)
+            fish = mystery if mystery else pick_fish(depth, location_id)
+        else:
+            fish = pick_fish(depth, location_id)
+
+        is_new = fishing_db.save_catch(db, patient_id, fish["id"], location_id, depth)
+        return {"fish": fish, "new": is_new, "location_complete": location_complete}
+    finally:
+        db.close()
+
+@app.get("/fish/collection/{patient_id}")
+async def get_collection(patient_id: int):
+    db = SessionLocal()
+    try:
+        caught = fishing_db.get_caught_ids(db, patient_id)
+        collection = [
+            {
+                **f,
+                "caught": f["id"] in caught,
+                "location": LOCATIONS_BY_ID[f["location_id"]]["name"] if f["location_id"] in LOCATIONS_BY_ID else "Unknown",
+            }
+            for f in FISH
+        ]
+        mystery_entries = []
+        for loc_id, mystery in MYSTERY_FISH_BY_LOCATION.items():
+            location_fish = [f for f in FISH if f["location_id"] == loc_id]
+            location_fish_ids = {f["id"] for f in location_fish}
+            location_complete = location_fish_ids.issubset(caught) if location_fish_ids else False
+            if location_complete:
+                mystery_entries.append({**mystery, "caught": mystery["id"] in caught, "location": LOCATIONS_BY_ID[loc_id]["name"]})
+            else:
+                mystery_entries.append({
+                    "id": mystery["id"], "name": "???", "rarity": "Location Legend",
+                    "location_id": loc_id, "location": LOCATIONS_BY_ID[loc_id]["name"],
+                    "color": "#333333", "caught": False, "locked": True,
+                })
+        return {"collection": collection, "mystery_fish": mystery_entries}
+    finally:
+        db.close()
+
+@app.get("/fish/location_complete/{patient_id}/{location_id}")
+async def check_location_complete(patient_id: int, location_id: int):
+    db = SessionLocal()
+    try:
+        caught = fishing_db.get_caught_ids(db, patient_id)
+        location_fish = [f for f in FISH if f["location_id"] == location_id]
+        location_fish_ids = {f["id"] for f in location_fish}
+        all_caught = location_fish_ids.issubset(caught) if location_fish_ids else False
+        mystery = MYSTERY_FISH_BY_LOCATION.get(location_id)
+        mystery_unlocked = mystery and mystery["id"] in caught
+        return {
+            "complete": all_caught,
+            "total": len(location_fish_ids),
+            "caught": len(location_fish_ids.intersection(caught)),
+            "mystery_unlocked": mystery_unlocked,
+            "mystery_fish": mystery if all_caught else None,
+        }
+    finally:
+        db.close()
+
+@app.get("/locations")
+async def get_locations():
+    return {"locations": LOCATIONS}
+
+
+# ── Space game (auth-gated) ───────────────────────────────────────────────────
+
+@app.get("/SpaceFunk")
+async def serve_space_game(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
+    return RedirectResponse("/SpaceFunk/", status_code=302)
+
+@app.get("/SpaceFunk/")
+async def serve_space_game_index(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
+    return FileResponse("../space-game/index.html")
+
+@app.get("/SpaceFunk/{path:path}")
+async def serve_space_assets(path: str):
+    file_path = f"../space-game/{path}"
+    if os.path.exists(file_path):
+        return FileResponse(file_path)
+    return FileResponse("../space-game/index.html")
+
+
+# ── Static mounts (must come after all explicit routes) ───────────────────────
+
+app.mount("/style", StaticFiles(directory="pages/styles"), name="style")
+
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=False)
-
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)

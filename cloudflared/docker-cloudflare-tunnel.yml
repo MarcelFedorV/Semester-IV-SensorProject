@@ -1,0 +1,7 @@
+tunnel: sensorproject
+credentials-file: /etc/cloudflared/credentials.json
+
+ingress:
+  - hostname: game.sensorproject.org
+    service: http://localhost:8000
+  - service: http_status:404

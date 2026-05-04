@@ -1,58 +1,87 @@
 extends Node2D
 
-const CHUNK_SCENE = preload("res://Scene/chunk.tscn")
 const ASTEROID_SCENE = preload("res://Scene/Asteroid.tscn")
-
 var textures = [
 	preload("res://Scene/BG1.png"),
 	preload("res://Scene/BG2.png"),
 ]
 
-const CHUNK_WIDTH: float = 1000.0
-const CHUNK_SPAWN_AHEAD: float = 3000.0   # spawn new chunk when player is this close to the last one
-const DESPAWN_DISTANCE: float = 2100.0
-const SPAWN_INTERVAL: float = 0.3
-const ASTEROID_SPAWN_AHEAD: float = 2000.0
-const ASTEROID_DESPAWN_BEHIND: float = 900.0
-const ASTEROID_ZONES: int = 5
-const ZONE_HEIGHT: float = 1400.0
+const SPAWN_INTERVAL: float  = 0.55
+const LANE_COUNT: int        = 6
+const LANE_MIN_Y: float      = -630.0
+const LANE_MAX_Y: float      =  630.0
+const LANE_JITTER: float     =  40.0
 
-var texture_index: int = 0
-var zone_index: int = 0
-var chunks: Array = []
-var asteroids: Array = []
-var spawn_timer: float = 0.0
+@export var bg_speed: float  = 80.0
+
+var _panels: Array           = []
+var _canvas_layer: CanvasLayer
+var _texture_index: int      = 1
+var _viewport_h: float       = 0.0
+var _viewport_w: float       = 0.0
+var _chunk_w: float          = 0.0
+
+var asteroids: Array         = []
+var spawn_timer: float       = 0.0
+var _last_lane: int          = -1
 var player: CharacterBody2D
+
+
+# ── Setup ──────────────────────────────────────────────────────────────────────
 
 func _ready() -> void:
 	player = get_tree().get_first_node_in_group("player")
 	if player == null:
-		push_error("Could not find player!")
+		push_error("LevelGenerator: could not find player!")
 		return
-	# Seed a few chunks to start
-	for i in range(3):
-		spawn_chunk(i * CHUNK_WIDTH)
+
+	var vp_size = get_viewport().get_visible_rect().size
+	_viewport_h = vp_size.y
+	_viewport_w = vp_size.x
+	_chunk_w    = _viewport_w
+	_setup_background()
+
+
+func _setup_background() -> void:
+	_canvas_layer       = CanvasLayer.new()
+	_canvas_layer.layer = -1
+	add_child(_canvas_layer)
+
+	for i in range(2):
+		var panel := TextureRect.new()
+		panel.texture      = textures[i % textures.size()]
+		panel.stretch_mode = TextureRect.STRETCH_SCALE
+		panel.size         = Vector2(_chunk_w, _viewport_h)
+		panel.position     = Vector2(i * _chunk_w, 0.0)
+		_canvas_layer.add_child(panel)
+		_panels.append(panel)
+
+
+# ── Per-frame ──────────────────────────────────────────────────────────────────
 
 func _process(delta: float) -> void:
 	if player == null:
 		return
+	_scroll_background(delta)
 	_handle_asteroid_spawning(delta)
 	_handle_asteroid_despawning()
-	_handle_chunk_spawning()
-	_handle_chunk_despawning()
 
-func _handle_chunk_spawning() -> void:
-	if chunks.is_empty():
-		return
-	# Keep spawning one at a time as player approaches the end
-	while chunks[-1].position.x < player.position.x + CHUNK_SPAWN_AHEAD:
-		spawn_chunk(chunks[-1].position.x + CHUNK_WIDTH)
 
-func _handle_chunk_despawning() -> void:
-	for chunk in chunks.duplicate():
-		if chunk.position.x < player.position.x - DESPAWN_DISTANCE:
-			chunk.queue_free()
-			chunks.erase(chunk)
+func _scroll_background(delta: float) -> void:
+	for panel in _panels:
+		panel.position.x -= bg_speed * delta
+
+	_panels.sort_custom(func(a, b): return a.position.x < b.position.x)
+	var left:  TextureRect = _panels[0]
+	var right: TextureRect = _panels[1]
+
+	if left.position.x + _chunk_w <= 0.0:
+		_texture_index  = (_texture_index + 1) % textures.size()
+		left.texture    = textures[_texture_index]
+		left.position.x = right.position.x + _chunk_w
+
+
+# ── Asteroids ─────────────────────────────────────────────────────────────────
 
 func _handle_asteroid_spawning(delta: float) -> void:
 	spawn_timer -= delta
@@ -60,24 +89,33 @@ func _handle_asteroid_spawning(delta: float) -> void:
 		spawn_asteroid()
 		spawn_timer = SPAWN_INTERVAL
 
+
 func _handle_asteroid_despawning() -> void:
 	for asteroid in asteroids.duplicate():
-		if not is_instance_valid(asteroid) or asteroid.position.x < player.position.x - ASTEROID_DESPAWN_BEHIND:
+		if not is_instance_valid(asteroid) or asteroid.position.x < player.position.x - 900.0:
+			if is_instance_valid(asteroid):
+				asteroid.queue_free()
 			asteroids.erase(asteroid)
 
+
+func _pick_lane() -> int:
+	var lane = randi() % LANE_COUNT
+	while lane == _last_lane:
+		lane = randi() % LANE_COUNT
+	_last_lane = lane
+	return lane
+
+
 func spawn_asteroid() -> void:
-	var asteroid = ASTEROID_SCENE.instantiate()
+	var lane      = _pick_lane()
+	var lane_step = (LANE_MAX_Y - LANE_MIN_Y) / (LANE_COUNT - 1)
+	var lane_y    = LANE_MIN_Y + lane * lane_step
+	var asteroid  = ASTEROID_SCENE.instantiate()
 	asteroid.position = Vector2(
-		player.position.x + ASTEROID_SPAWN_AHEAD + randf_range(-200.0, 200.0),
-		player.position.y + randf_range(-700.0, 700.0)
+		player.position.x + 2000.0,
+		player.position.y + lane_y + randf_range(-LANE_JITTER, LANE_JITTER)
 	)
+	asteroid.z_index         = 1
+	asteroid.level_generator = self
 	add_child(asteroid)
 	asteroids.append(asteroid)
-
-func spawn_chunk(x_pos: float) -> void:
-	var chunk = CHUNK_SCENE.instantiate()
-	chunk.position.x = x_pos
-	add_child(chunk)
-	chunks.append(chunk)
-	chunk.get_node("TextureRect").texture = textures[texture_index]
-	texture_index = (texture_index + 1) % textures.size()
