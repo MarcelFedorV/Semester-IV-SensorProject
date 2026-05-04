@@ -144,7 +144,7 @@ func _build_achievements(unlocked: Array, stats: Dictionary, all_achievements: A
 
 	var vp     = get_viewport().get_visible_rect().size
 	var card_w = (vp.x - 48) / 3.0
-	var card_h = card_w * 1.3
+	var card_h = card_w * 0.9
 
 	var stats_label = Label.new()
 	stats_label.text = "Total Distance: %.2f km" % stats.get("total_distance_km", 0.0)
@@ -210,9 +210,9 @@ func _make_achievement_card(ach: Dictionary, unlocked: bool, w: float, h: float)
 	var icon_label = Label.new()
 	icon_label.text = ach.get("icon", "?")
 	icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	icon_label.size     = Vector2(w, h * 0.45)
-	icon_label.position = Vector2(0, 10)
-	icon_label.add_theme_font_size_override("font_size", 28)
+	icon_label.size     = Vector2(w, h * 0.4)
+	icon_label.position = Vector2(0, 8)
+	icon_label.add_theme_font_size_override("font_size", 36)
 	icon_label.modulate = Color.WHITE if unlocked else Color(0.4, 0.4, 0.4)
 	card.add_child(icon_label)
 
@@ -222,7 +222,7 @@ func _make_achievement_card(ach: Dictionary, unlocked: bool, w: float, h: float)
 	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 	name_label.size     = Vector2(w, h * 0.35)
 	name_label.position = Vector2(0, h * 0.5)
-	name_label.add_theme_font_size_override("font_size", 11)
+	name_label.add_theme_font_size_override("font_size", 14)
 	name_label.modulate = Color.WHITE if unlocked else Color(0.5, 0.5, 0.5)
 	card.add_child(name_label)
 
@@ -232,7 +232,7 @@ func _make_achievement_card(ach: Dictionary, unlocked: bool, w: float, h: float)
 	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 	desc_label.size     = Vector2(w, h * 0.25)
 	desc_label.position = Vector2(0, h * 0.72)
-	desc_label.add_theme_font_size_override("font_size", 9)
+	desc_label.add_theme_font_size_override("font_size", 11)
 	desc_label.modulate = Color(0.8, 0.8, 0.8) if unlocked else Color(0.4, 0.4, 0.4)
 	card.add_child(desc_label)
 
