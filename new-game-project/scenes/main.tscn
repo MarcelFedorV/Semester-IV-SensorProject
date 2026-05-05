@@ -210,5 +210,6 @@ stretch_mode = 5
 [node name="MusicPlayer" type="AudioStreamPlayer" parent="." unique_id=66432737]
 stream = ExtResource("11_ya4ey")
 volume_db = -9.509
+autoplay = true
 
 [node name="HTTPRequestDistance" type="HTTPRequest" parent="." unique_id=1865498101]

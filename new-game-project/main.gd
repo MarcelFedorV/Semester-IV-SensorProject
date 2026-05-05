@@ -42,7 +42,7 @@ const SAVE_INTERVAL = 10.0  # save every 10 seconds
 @onready var http_locations = $HTTPRequestLocations
 @onready var http_user = $HTTPRequestUser
 @onready var music_player = $MusicPlayer
-@onready var distance_label = $UI/DistanceLabel
+@onready var distance_label = $UI/Distance
 @onready var achievement_popup = $UI/AchievementPopup
 
 var is_touching = false
@@ -82,7 +82,6 @@ func _ready():
 	_setup_ui_theme()
 	_setup_location_ui()
 	_fetch_user_id()
-	music_player.play()
 	fisher.setup(screen_w, screen_h, DOCK_Y_PCT, CENTER_X_PCT)
 	fish_manager.setup(screen_w, screen_h)
 	game_state.metrics_updated.connect(_on_metrics_updated)
@@ -147,11 +146,13 @@ func _setup_background():
 	bobber.size = Vector2(40, 40)  # adjust based on how big you want it
 
 func _process(delta):
-	game_state.is_moving = _get_is_moving()
+	var is_moving = _get_is_moving()
+	game_state.is_moving = is_moving
 	game_state.update(delta)
 	fish_manager.update(delta, screen_w)
 	_update_visuals()
 	_update_status_label()
+	distance_label.text = "🚴 %.2f km" % (game_state.played_distance_m / 1000.0)
 	
 	_save_timer += delta
 	if _save_timer >= SAVE_INTERVAL:
