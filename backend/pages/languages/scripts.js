@@ -29,7 +29,7 @@ function changeLanguage() {
         elements.forEach(el => {
             console.log(el.id);
             console.log(translations[el.id]["en"]);
-            el.textContent = translations[el.id][lang];
+            el.innerHTML = translations[el.id][lang];
         });
 
 }

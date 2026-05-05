@@ -23,6 +23,10 @@
     padding: 0;
 }
 
+.languageclass {
+    display: inline;
+}
+
 body {
     min-height: 100vh;
     font-family: var(--sans);
