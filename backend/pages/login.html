@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
     <link rel="stylesheet" href="/style/common.css">
+    <script src="/languages/scripts.js"></script>
+    <script src="/languages/translations.js"></script>
 </head>
 
 <body>
@@ -28,6 +30,10 @@
             </div>
         </div>
         <div class="header-right">
+            <select id="lang" name="language" style="margin-right:16px;"  onchange="setLanguage(this)">
+                <option value="en">EN</option>
+                <option value="dk">DK</option>
+            </select>
             <span class="status-dot"></span>
             system online
         </div>
