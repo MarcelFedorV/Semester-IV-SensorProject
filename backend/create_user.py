@@ -4,7 +4,7 @@ from models import User
 
 Base.metadata.create_all(bind=engine)
 
-def create_user(username: str, password: str):
+def create_user(username: str, password: str, lang: str = "en"):
     db = SessionLocal()
     if db.query(User).filter(User.username == username).first():
         print(f"User '{username}' already exists.")
@@ -19,3 +19,5 @@ def create_user(username: str, password: str):
 
 if __name__ == "__main__":
     create_user("john", "securepassword123")
+    create_user("jan", "jan123")
+    create_user("admin", "admin123")

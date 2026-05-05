@@ -1,14 +1,21 @@
 function setLanguage(selectElement) {
-  const selectedValue = selectElement.value.toLowerCase();
-  console.log("Selected:", selectedValue);
-
-  localStorage.setItem('lang', selectedValue);
+    var selectedValue = "";
+    if (typeof selectElement === "string") {
+        selectedValue = selectElement.toLowerCase();
+    } else {
+        selectedValue = String(selectElement.value).toLowerCase();
+    }
+    console.log("Selected:", selectedValue);
+    document.getElementById('langSwitcher').value = selectedValue;
+//   localStorage.setItem('lang', selectedValue);
 
   changeLanguage();
 }
 
 function changeLanguage() {
-    const lang = localStorage.getItem('lang') || 'en';
+    // const lang = localStorage.getItem('lang') || 'en';
+    const lang = document.getElementById('langSwitcher').value || 'en';
+    // document.getElementById('langSwitcher').value = lang;
     
     // fetch("/languages/translations.js")
     // .then(response => response.json())
@@ -27,13 +34,47 @@ function changeLanguage() {
 
 }
 
-// const translations = {
-//     "logo-text": {
-//         "en": "SensorProject",
-//         "dk": "SensorProjekt"
-//     },
-//     "logo-sub": {
-//         "en": "Semester IV · Group 11",
-//         "dk": "Semester IV · Gruppe 11"
-//     }
-// };
+async function loadLanguage() {
+    try {
+        const response = await fetch('/api/user');
+        const data = await response.json();
+        
+        if (response.ok) {
+            console.log("User data:", data);
+            const lang = data.language.toString() || 'en';
+            console.log("User language:", lang);
+            setLanguage(lang);
+        } else {
+            console.log('Failed to load user data');
+        }
+    } catch (error) {
+        console.log('Error loading language');
+        console.error(error);
+    }
+}
+
+async function saveLanguage() {
+    const language = document.getElementById("langSwitcher").value;
+    console.log("Saving language:", language);
+
+    try {
+        const response = await fetch('/api/user', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                language: language || "en",
+            })
+        });
+
+        if (response.ok) {
+            console.log('Language updated successfully');
+        } else {
+            console.log('Failed to update language');
+        }
+    } catch (error) {
+        console.log('Error saving language');
+        console.error(error);
+    }
+}
