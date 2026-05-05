@@ -10,7 +10,7 @@
     <script src="/languages/translations.js"></script>
 </head>
 
-<body onload="changeLanguage();">
+<body onload="loadLanguage();">
 
     <div class="grid-bg"></div>
     <div class="glow"></div>
@@ -33,7 +33,7 @@
         <div class="card-eyebrow">Fishing Game</div>
         <div class="card-eyebrow">Space Funk</div>
         <div class="header-right">
-            <select id="lang" name="language" style="margin-right:16px;"  onchange="setLanguage(this)">
+            <select id="langSwitcher" name="language" style="margin-right:16px;"  onchange="setLanguage(this); saveLanguage();">
                 <option value="en">EN</option>
                 <option value="dk">DK</option>
             </select>

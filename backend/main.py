@@ -178,7 +178,8 @@ async def get_user(request: Request):
         "bio": user.bio,
         "age": user.age,
         "favorite_game": user.favorite_game,
-        "role": user.role
+        "role": user.role,
+        "language": user.language
     }
 
 @app.put("/api/user")
@@ -188,7 +189,7 @@ async def update_user(request: Request):
         return {"detail": "Not authenticated"}, 401
     
     data = await request.json()
-    
+    print(f"Update data: {data}")
     db = SessionLocal()
     user = db.query(User).filter(User.username == username).first()
     
@@ -204,6 +205,8 @@ async def update_user(request: Request):
         user.age = data.get("age")
     if "favorite_game" in data:
         user.favorite_game = data.get("favorite_game")
+    if "language" in data:
+        user.language = data.get("language")
     
     db.commit()
     db.close()

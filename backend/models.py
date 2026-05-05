@@ -11,3 +11,4 @@ class User(Base):
     age      = Column(Integer, nullable=True)
     favorite_game = Column(String, nullable=True)
     role     = Column(String, default="user", nullable=False)  # "admin" or "user"
+    language = Column(String, default="en", nullable=False)  # "en" or "dk"

@@ -10,7 +10,7 @@
     <script src="/languages/translations.js"></script>
 </head>
 
-<body>
+<body onload="loadLanguage();">
 
     <div class="grid-bg"></div>
     <div class="glow"></div>
@@ -22,7 +22,7 @@
                     <div class="logo">
                         <div class="logo-icon"></div>
                         <div>
-<div class="logo-text"><p class="languageclass" id="logo-text">SensorProject</p></div>
+                            <div class="logo-text"><p class="languageclass" id="logo-text">SensorProject</p></div>
                             <div class="logo-sub"><p class="languageclass" id="logo-sub">Semester IV · Group 11</p></div>
                         </div>
                     </div>
@@ -33,7 +33,7 @@
         <div class="card-eyebrow">Fishing Game</div>
         <div class="card-eyebrow">Space Funk</div>
         <div class="header-right">
-            <select id="lang" name="language" style="margin-right:16px;"  onchange="setLanguage(this)">
+            <select id="langSwitcher" name="language" style="margin-right:16px;"  onchange="setLanguage(this); saveLanguage();">
                 <option value="en">EN</option>
                 <option value="dk">DK</option>
             </select>
@@ -129,6 +129,7 @@
                     document.getElementById('bio').value = data.bio || '';
                     document.getElementById('age').value = data.age || '';
                     document.getElementById('favorite-game').value = data.favorite_game || '';
+                    setLanguage(data.language || 'en' );
                 } else {
                     showError('Failed to load user data');
                 }
@@ -148,6 +149,7 @@
             const bio = document.getElementById('bio').value.trim();
             const age = document.getElementById('age').value.trim();
             const favoriteGame = document.getElementById('favorite-game').value.trim();
+            const language = document.getElementById('langSwitcher').value.trim();
 
             if (email && !isValidEmail(email)) {
                 showError('Please enter a valid email address');
@@ -169,7 +171,8 @@
                         email: email || null,
                         bio: bio || null,
                         age: age ? parseInt(age) : null,
-                        favorite_game: favoriteGame || null
+                        favorite_game: favoriteGame || null,
+                        language: language || null,
                     })
                 });
 
