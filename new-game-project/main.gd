@@ -152,7 +152,7 @@ func _process(delta):
 	fish_manager.update(delta, screen_w)
 	_update_visuals()
 	_update_status_label()
-	distance_label.text = "🚴 %.2f km" % (game_state.played_distance_m / 1000.0)
+	distance_label.text = "%.2f km" % (game_state.played_distance_m / 1000.0)
 	
 	_save_timer += delta
 	if _save_timer >= SAVE_INTERVAL:
@@ -241,7 +241,7 @@ func _on_catch_response(_result, response_code, _headers, body):
 	var data = json.get_data()
 
 	if data.get("missed", false):
-		_show_notification("🐟 The fish got away!")
+		_show_notification("The fish got away!")
 		game_state.reset()
 		status_label.text = "Tap or pedal to fish"
 		return
@@ -251,7 +251,7 @@ func _on_catch_response(_result, response_code, _headers, body):
 	if sprite == null:
 		sprite = ""
 	catch_reveal.show_catch(fish["name"], fish["rarity"], fish["fact"], sprite)
-	_show_notification("🐟 %s added to collection!" % fish["name"])
+	_show_notification("%s added to collection!" % fish["name"])
 
 	var new_achievements = data.get("new_achievements", [])
 	for ach in new_achievements:
@@ -341,6 +341,55 @@ func _setup_button_style(button : Button):
 	
 func _setup_ui_theme():
 	_setup_button_style(collection_button)
+	
+	# Apply Nunito Bold font to key UI elements
+	var nunito_font = load("res://assets/fonts/Nunito-VariableFont_wght.ttf")
+	
+	# Setup notification label - centered at bottom with large font
+	notification_label.anchors_preset = 8  # Bottom center
+	notification_label.anchor_left = 0.5
+	notification_label.anchor_top = 1.0
+	notification_label.anchor_right = 0.5
+	notification_label.anchor_bottom = 1.0
+	notification_label.offset_left = -150
+	notification_label.offset_top = -120
+	notification_label.offset_right = 150
+	notification_label.offset_bottom = -20
+	notification_label.custom_minimum_size = Vector2(300, 80)
+	notification_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	notification_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	notification_label.add_theme_font_override("font", nunito_font)
+	notification_label.add_theme_font_size_override("font_size", 36)
+	notification_label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+	notification_label.add_theme_constant_override("outline_size", 3)
+	notification_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
+	notification_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	
+	# Setup Fish On label
+	fish_on_label.anchors_preset = 8
+	fish_on_label.anchor_left = 0.5
+	fish_on_label.anchor_top = 0.5
+	fish_on_label.anchor_right = 0.5
+	fish_on_label.anchor_bottom = 0.5
+	fish_on_label.offset_left = -60
+	fish_on_label.offset_top = -30
+	fish_on_label.offset_right = 60
+	fish_on_label.offset_bottom = 30
+	fish_on_label.add_theme_font_override("font", nunito_font)
+	fish_on_label.add_theme_font_size_override("font_size", 56)
+	fish_on_label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+	fish_on_label.add_theme_constant_override("outline_size", 4)
+	fish_on_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+	
+
+	
+	# Apply font to status label
+	status_label.add_theme_font_override("font", nunito_font)
+	status_label.add_theme_font_size_override("font_size", 20)
+	
+	# Apply font to distance label
+	distance_label.add_theme_font_override("font", nunito_font)
+	distance_label.add_theme_font_size_override("font_size", 22)
 
 
 

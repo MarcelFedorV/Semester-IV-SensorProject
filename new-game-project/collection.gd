@@ -34,11 +34,14 @@ func _setup_layout():
 	background.position = Vector2.ZERO
 	background.color    = Color(0.1, 0.15, 0.25)
 
-	title.text         = "🐟 Collection"
+	var nunito_font = load("res://assets/fonts/Nunito-VariableFont_wght.ttf")
+
+	title.text         = "Collection"
 	title.position     = Vector2(0, 40)
 	title.size         = Vector2(vp.x, 50)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_font_override("font", nunito_font)
+	title.add_theme_font_size_override("font_size", 36)
 	title.modulate     = Color.WHITE
 
 	back_button.text     = "← Back"
@@ -142,6 +145,7 @@ func _build_achievements(unlocked: Array, stats: Dictionary, all_achievements: A
 		return
 	await get_tree().process_frame
 
+	var nunito_font = load("res://assets/fonts/Nunito-VariableFont_wght.ttf")
 	var vp     = get_viewport().get_visible_rect().size
 	var card_w = (vp.x - 48) / 3.0
 	var card_h = card_w * 0.9
@@ -150,22 +154,23 @@ func _build_achievements(unlocked: Array, stats: Dictionary, all_achievements: A
 	stats_label.text = "Total Distance: %.2f km" % stats.get("total_distance_km", 0.0)
 	stats_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	stats_label.modulate = Color.WHITE
-	stats_label.add_theme_font_size_override("font_size", 16)
+	stats_label.add_theme_font_override("font", nunito_font)
+	stats_label.add_theme_font_size_override("font_size", 20)
 	stats_label.custom_minimum_size = Vector2(0, 40)
 	vbox.add_child(stats_label)
 
 	var fishing_achs  = all_achievements.filter(func(a): return a.get("category") == "fishing")
 	var distance_achs = all_achievements.filter(func(a): return a.get("category") == "distance")
 
-	_build_achievement_section("FISHING",  fishing_achs,  unlocked, card_w, card_h)
-	_build_achievement_section("DISTANCE", distance_achs, unlocked, card_w, card_h)
+	_build_achievement_section("FISHING",  fishing_achs,  unlocked, card_w, card_h, nunito_font)
+	_build_achievement_section("DISTANCE", distance_achs, unlocked, card_w, card_h, nunito_font)
 	
-	
-func _build_achievement_section(section_title: String, achievements: Array, unlocked: Array, card_w: float, card_h: float):
+func _build_achievement_section(section_title: String, achievements: Array, unlocked: Array, card_w: float, card_h: float, nunito_font):
 	var header = Label.new()
 	header.text = section_title
 	header.modulate = Color(1.0, 0.85, 0.0)
-	header.add_theme_font_size_override("font_size", 18)
+	header.add_theme_font_override("font", nunito_font)
+	header.add_theme_font_size_override("font_size", 24)
 	header.custom_minimum_size = Vector2(0, 36)
 	vbox.add_child(header)
 
@@ -178,7 +183,7 @@ func _build_achievement_section(section_title: String, achievements: Array, unlo
 			hbox.add_theme_constant_override("separation", 8)
 			vbox.add_child(hbox)
 		var is_unlocked = ach["id"] in unlocked
-		var card = _make_achievement_card(ach, is_unlocked, card_w, card_h)
+		var card = _make_achievement_card(ach, is_unlocked, card_w, card_h, nunito_font)
 		hbox.add_child(card)
 		count += 1
 
@@ -195,7 +200,7 @@ func _build_achievement_section(section_title: String, achievements: Array, unlo
 	spacer.custom_minimum_size = Vector2(0, 16)
 	vbox.add_child(spacer)
 
-func _make_achievement_card(ach: Dictionary, unlocked: bool, w: float, h: float) -> Control:
+func _make_achievement_card(ach: Dictionary, unlocked: bool, w: float, h: float, nunito_font) -> Control:
 	var card = ColorRect.new()
 	card.custom_minimum_size = Vector2(w, h)
 	card.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
@@ -212,7 +217,8 @@ func _make_achievement_card(ach: Dictionary, unlocked: bool, w: float, h: float)
 	icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	icon_label.size     = Vector2(w, h * 0.4)
 	icon_label.position = Vector2(0, 8)
-	icon_label.add_theme_font_size_override("font_size", 36)
+	icon_label.add_theme_font_override("font", nunito_font)
+	icon_label.add_theme_font_size_override("font_size", 48)
 	icon_label.modulate = Color.WHITE if unlocked else Color(0.4, 0.4, 0.4)
 	card.add_child(icon_label)
 
@@ -222,7 +228,8 @@ func _make_achievement_card(ach: Dictionary, unlocked: bool, w: float, h: float)
 	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 	name_label.size     = Vector2(w, h * 0.35)
 	name_label.position = Vector2(0, h * 0.5)
-	name_label.add_theme_font_size_override("font_size", 14)
+	name_label.add_theme_font_override("font", nunito_font)
+	name_label.add_theme_font_size_override("font_size", 18)
 	name_label.modulate = Color.WHITE if unlocked else Color(0.5, 0.5, 0.5)
 	card.add_child(name_label)
 
@@ -232,7 +239,8 @@ func _make_achievement_card(ach: Dictionary, unlocked: bool, w: float, h: float)
 	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 	desc_label.size     = Vector2(w, h * 0.25)
 	desc_label.position = Vector2(0, h * 0.72)
-	desc_label.add_theme_font_size_override("font_size", 11)
+	desc_label.add_theme_font_override("font", nunito_font)
+	desc_label.add_theme_font_size_override("font_size", 14)
 	desc_label.modulate = Color(0.8, 0.8, 0.8) if unlocked else Color(0.4, 0.4, 0.4)
 	card.add_child(desc_label)
 
@@ -243,6 +251,7 @@ func _build_collection(fish_list: Array, mystery_list: Array):
 		child.queue_free()
 	await get_tree().process_frame
 
+	var nunito_font = load("res://assets/fonts/Nunito-VariableFont_wght.ttf")
 	var vp     = get_viewport().get_visible_rect().size
 	var card_w = (vp.x - 48) / 3.0
 	var card_h = card_w * 1.3
@@ -263,7 +272,8 @@ func _build_collection(fish_list: Array, mystery_list: Array):
 		var header = Label.new()
 		header.text     = rarity.to_upper()
 		header.modulate = _rarity_color(rarity)
-		header.add_theme_font_size_override("font_size", 18)
+		header.add_theme_font_override("font", nunito_font)
+		header.add_theme_font_size_override("font_size", 24)
 		header.custom_minimum_size = Vector2(0, 36)
 		vbox.add_child(header)
 
@@ -274,7 +284,7 @@ func _build_collection(fish_list: Array, mystery_list: Array):
 				hbox = HBoxContainer.new()
 				hbox.add_theme_constant_override("separation", 12)
 				vbox.add_child(hbox)
-			var card = _make_card(fish, fish["caught"], card_w, card_h)
+			var card = _make_card(fish, fish["caught"], card_w, card_h, nunito_font, false)
 			hbox.add_child(card)
 			count += 1
 
@@ -292,7 +302,8 @@ func _build_collection(fish_list: Array, mystery_list: Array):
 	var mystery_header = Label.new()
 	mystery_header.text    = "LOCATION LEGENDS"
 	mystery_header.modulate = Color(1.0, 0.85, 0.0)
-	mystery_header.add_theme_font_size_override("font_size", 18)
+	mystery_header.add_theme_font_override("font", nunito_font)
+	mystery_header.add_theme_font_size_override("font_size", 24)
 	mystery_header.custom_minimum_size = Vector2(0, 36)
 	vbox.add_child(mystery_header)
 
@@ -304,11 +315,11 @@ func _build_collection(fish_list: Array, mystery_list: Array):
 			m_hbox.add_theme_constant_override("separation", 12)
 			vbox.add_child(m_hbox)
 		var locked = mystery.get("locked", false)
-		var card   = _make_card(mystery, mystery.get("caught", false), card_w, card_h, locked)
+		var card   = _make_card(mystery, mystery.get("caught", false), card_w, card_h, nunito_font, locked)
 		m_hbox.add_child(card)
 		m_count += 1
 
-func _make_card(fish: Dictionary, caught: bool, w: float, h: float, locked: bool = false) -> Control:
+func _make_card(fish: Dictionary, caught: bool, w: float, h: float, nunito_font, locked: bool = false) -> Control:
 	var card = ColorRect.new()
 	card.custom_minimum_size = Vector2(w, h)
 
@@ -331,7 +342,7 @@ func _make_card(fish: Dictionary, caught: bool, w: float, h: float, locked: bool
 	card.add_child(strip)
 
 	if locked:
-		_add_label(card, "🔒", w, h, false)
+		_add_label(card, "�️", w, h, false, nunito_font)
 	elif caught:
 		var sprite_path = fish.get("sprite", "")
 		if sprite_path != null and sprite_path != "":
@@ -345,32 +356,34 @@ func _make_card(fish: Dictionary, caught: bool, w: float, h: float, locked: bool
 				img.position     = Vector2(0, 6)
 				card.add_child(img)
 			else:
-				_add_label(card, fish["name"], w, h, true)
+				_add_label(card, fish["name"], w, h, true, nunito_font)
 		else:
-			_add_label(card, fish["name"], w, h, true)
+			_add_label(card, fish["name"], w, h, true, nunito_font)
 	else:
 		var placeholder = "???" if fish["rarity"] == "Location Legend" else "?"
-		_add_label(card, placeholder, w, h, false)
+		_add_label(card, placeholder, w, h, false, nunito_font)
 
 	var name_label = Label.new()
 	name_label.text = fish["name"] if (caught and not locked) else "???"
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_label.size     = Vector2(w, 24)
-	name_label.position = Vector2(0, h - 26)
-	name_label.add_theme_font_size_override("font_size", 11)
+	name_label.size     = Vector2(w, 32)
+	name_label.position = Vector2(0, h - 34)
+	name_label.add_theme_font_override("font", nunito_font)
+	name_label.add_theme_font_size_override("font_size", 16)
 	name_label.modulate = Color(1.0, 0.85, 0.0) if fish["rarity"] == "Location Legend" else Color.BLACK
 	card.add_child(name_label)
 
 	return card
 
-func _add_label(card: ColorRect, text: String, w: float, h: float, caught: bool) -> void:
+func _add_label(card: ColorRect, text: String, w: float, h: float, caught: bool, nunito_font) -> void:
 	var label = Label.new()
 	label.text = text
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment   = VERTICAL_ALIGNMENT_CENTER
 	label.size     = Vector2(w, h)
 	label.position = Vector2.ZERO
-	label.add_theme_font_size_override("font_size", 20 if caught else 36)
+	label.add_theme_font_override("font", nunito_font)
+	label.add_theme_font_size_override("font_size", 32 if caught else 48)
 	label.modulate = Color.BLACK
 	card.add_child(label)
 

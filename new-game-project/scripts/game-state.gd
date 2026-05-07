@@ -64,6 +64,9 @@ func _handle_ws_message(raw: String) -> void:
 			sensor_active = msg.get("active", false)
 		"disconnected":
 			sensor_active = false
+			# Save current distance before reset to prevent loss on reconnect
+			get_parent()._save_distance()
+			total_distance_m = 0.0  # Reset for clean reconnect
 		"metrics":
 			current_speed_kmh = msg.get("speed_kmh", 0.0)
 			current_cadence   = msg.get("cadence_rpm", 0.0)
