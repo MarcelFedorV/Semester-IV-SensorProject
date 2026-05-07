@@ -8,7 +8,9 @@
 [ext_resource type="Texture2D" uid="uid://571kxcx3a2sw" path="res://assets/bobber.png" id="4_85g3d"]
 [ext_resource type="Script" uid="uid://dvu4xtx314dxx" path="res://scripts/fish_manager.gd" id="4_tefeu"]
 [ext_resource type="Script" uid="uid://tip82porhkaa" path="res://scripts/game-state.gd" id="5_o6xl0"]
+[ext_resource type="Script" uid="uid://7wfkomiq0872" path="res://scripts/achievement_popup.gd" id="6_ya4ey"]
 [ext_resource type="Texture2D" uid="uid://c575xaru6kmln" path="res://assets/boat.png" id="8_tipki"]
+[ext_resource type="AudioStream" uid="uid://lriwavlte1iv" path="res://assets/audio/music_main.ogg" id="11_ya4ey"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_tefeu"]
 shader = ExtResource("2_tefeu")
@@ -151,6 +153,33 @@ offset_bottom = 8.0
 offset_right = 8.0
 offset_bottom = 8.0
 
+[node name="AchievementPopup" type="PanelContainer" parent="UI" unique_id=1607125463]
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("6_ya4ey")
+
+[node name="AchievementBox" type="HBoxContainer" parent="UI/AchievementPopup" unique_id=458892259]
+layout_mode = 2
+
+[node name="AchievementIcon" type="Label" parent="UI/AchievementPopup/AchievementBox" unique_id=1042531397]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UI/AchievementPopup/AchievementBox" unique_id=600218110]
+layout_mode = 2
+
+[node name="AchievementTitle" type="Label" parent="UI/AchievementPopup/AchievementBox/VBoxContainer" unique_id=743598347]
+layout_mode = 2
+
+[node name="AchievementDesc" type="Label" parent="UI/AchievementPopup/AchievementBox/VBoxContainer" unique_id=1181356492]
+layout_mode = 2
+
+[node name="Distance" type="Label" parent="UI" unique_id=1915374826]
+offset_left = 135.0
+offset_top = 750.0
+offset_right = 255.0
+offset_bottom = 780.0
+text = "0.00 km"
+
 [node name="WebSocket" type="Node" parent="." unique_id=1092900758]
 
 [node name="Fisher" type="Node2D" parent="." unique_id=1564531806]
@@ -177,3 +206,10 @@ stretch_mode = 5
 [node name="HTTPRequestLocations" type="HTTPRequest" parent="." unique_id=1408988133]
 
 [node name="HTTPRequestUser" type="HTTPRequest" parent="." unique_id=294828330]
+
+[node name="MusicPlayer" type="AudioStreamPlayer" parent="." unique_id=66432737]
+stream = ExtResource("11_ya4ey")
+volume_db = -9.509
+autoplay = true
+
+[node name="HTTPRequestDistance" type="HTTPRequest" parent="." unique_id=1865498101]

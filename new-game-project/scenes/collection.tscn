@@ -45,3 +45,7 @@ horizontal_scroll_mode = 0
 layout_mode = 2
 
 [node name="HTTPRequestUser" type="HTTPRequest" parent="." unique_id=292365460]
+
+[node name="HTTPRequestAchievements" type="HTTPRequest" parent="." unique_id=1402135227]
+
+[node name="HTTPRequestAllAchievements" type="HTTPRequest" parent="." unique_id=677584262]

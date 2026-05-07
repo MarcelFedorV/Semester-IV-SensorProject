@@ -29,12 +29,14 @@ from starlette.middleware.sessions import SessionMiddleware
 from passlib.context import CryptContext
 from database import SessionLocal, engine, Base
 from models import User
-from fishing_models import FishCatch, FishCollection, Achievement
+from fishing_models import FishCatch, FishCollection, AchievementUnlock
 import fishing_db
 import bcrypt
 import uvicorn
-from fish_logic import pick_fish
 from fish_data import FISH_BY_ID, FISH, LOCATIONS, MYSTERY_FISH_BY_LOCATION, LOCATIONS_BY_ID
+from sensor_device import BLEManager
+from achievements import ACHIEVEMENTS, ACHIEVEMENTS_BY_ID
+from fish_agent import FishAgent
 
 
 
@@ -43,7 +45,7 @@ app = FastAPI()
 
 
 if sys.platform == "win32":
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    asyncio.set_event_loop(asyncio.SelectorEventLoop())
 
 manager     = BLEClient()
 connections: list[WebSocket] = []
@@ -71,6 +73,17 @@ manager.on_switch_progress      = lambda m: asyncio.create_task(broadcast({"type
 manager.on_switch_done          = lambda r: asyncio.create_task(broadcast({"type": "switch_done",           "result":  r}))
 manager.on_devices_list         = lambda l: asyncio.create_task(broadcast({"type": "devices_list", "devices": l}))
 manager.on_status               = lambda s: asyncio.create_task(broadcast({"type": "status",       "status":  s}))
+manager.on_sensor_state = lambda active: asyncio.create_task(broadcast({"type": "sensor_state", "active": active}))
+
+def _on_metrics(m: dict):
+    print(
+        f"[Sensor] speed={m['speed_kmh']:5.1f} km/h  "
+        f"cadence={m['cadence_rpm']:5.1f} rpm  "
+        f"distance={m['distance_m']:6.1f} m"
+    )
+    asyncio.create_task(broadcast({"type": "metrics", **m}))
+
+manager.on_metrics = _on_metrics
 
 
 @asynccontextmanager
@@ -484,23 +497,47 @@ async def get_me(request: Request):
 async def catch_fish(depth: float, patient_id: int = 1, location_id: int = 1):
     db = SessionLocal()
     try:
+        # Unified FishAgent system: each agent decides if it catches
         caught = fishing_db.get_caught_ids(db, patient_id)
         location_fish = [f for f in FISH if f["location_id"] == location_id]
         location_fish_ids = {f["id"] for f in location_fish}
         location_complete = location_fish_ids.issubset(caught) if location_fish_ids else False
 
-        if location_complete and random.random() < 0.3:
+        # Check if we should try a mystery fish
+        use_mystery = location_complete and random.random() < 0.3
+        if use_mystery:
             mystery = MYSTERY_FISH_BY_LOCATION.get(location_id)
-            fish = mystery if mystery else pick_fish(depth, location_id)
+            pool = [mystery] if mystery else location_fish
         else:
-            fish = pick_fish(depth, location_id)
+            pool = location_fish if location_fish else FISH
 
-        is_new = fishing_db.save_catch(db, patient_id, fish["id"], location_id, depth)
+        # Try each fish in pool — first one that catches wins
+        random.shuffle(pool)
+        caught_fish = None
+        for fish in pool:
+            agent = FishAgent(fish)
+            result = agent.run(depth, location_id)
+            if result["caught"]:
+                caught_fish = fish
+                break
+
+        if not caught_fish:
+            return {
+                "fish": None,
+                "missed": True,
+                "new_achievements": []
+            }
+
+        is_new = fishing_db.save_catch(db, patient_id, caught_fish["id"], location_id, depth)
+        caught_after = fishing_db.get_caught_ids(db, patient_id)
+        new_achievements = fishing_db.check_fishing_achievements(db, patient_id, caught_fish, caught_after)
 
         return {
-            "fish": fish,
+            "fish": caught_fish,
             "new": is_new,
+            "missed": False,
             "location_complete": location_complete,
+            "new_achievements": [ACHIEVEMENTS_BY_ID[a] for a in new_achievements if a in ACHIEVEMENTS_BY_ID]
         }
     finally:
         db.close()
@@ -571,6 +608,41 @@ async def check_location_complete(patient_id: int, location_id: int):
         db.close()
 
 
+
+
+@app.post("/player/distance")
+async def update_distance(request: Request, distance_m: float, user_id: int):
+    """Called by WebSocket metrics handler to save distance."""
+    db = SessionLocal()
+    try:
+        new_achievements = fishing_db.add_distance(db, user_id, distance_m)
+        return {
+            "stats": fishing_db.get_stats(db, user_id),
+            "new_achievements": [ACHIEVEMENTS_BY_ID[a] for a in new_achievements if a in ACHIEVEMENTS_BY_ID]
+        }
+    finally:
+        db.close()
+
+
+
+
+@app.get("/player/stats/{user_id}")
+async def get_player_stats(user_id: int):
+    db = SessionLocal()
+    try:
+        unlocked_ids = fishing_db.get_unlocked_achievements(db, user_id)
+        return {
+            "stats":            fishing_db.get_stats(db, user_id),
+            "achievements":     unlocked_ids,
+            "all_achievements": ACHIEVEMENTS
+        }
+    finally:
+        db.close()
+
+
+
+
+
 @app.get("/locations")
 async def get_locations():
     return {"locations": LOCATIONS}
@@ -586,6 +658,9 @@ if os.path.exists("games/FishingGame/index.html"):
 
 app.mount("/style", StaticFiles(directory="pages/styles"), name="style")
 app.mount("/languages", StaticFiles(directory="pages/languages"), name="languages")
+
+if os.path.exists("../space-game/index.html"):
+    app.mount("/SpaceFunk", StaticFiles(directory="../space-game", html=True), name="space")
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)

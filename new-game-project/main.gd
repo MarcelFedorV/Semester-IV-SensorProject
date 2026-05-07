@@ -16,7 +16,12 @@ var current_location_id = 1
 var locations = []
 var current_location_index = 0
 var patient_id = 1
+var _distance_to_save = 0.0
+var _last_saved_distance = 0.0
+var _save_timer = 0.0
+const SAVE_INTERVAL = 10.0  # save every 10 seconds
 
+@onready var http_distance = $HTTPRequestDistance
 @onready var bobber       = $Bobber
 @onready var fishing_line = $Line
 @onready var water        = $WaterSurface
@@ -36,6 +41,9 @@ var patient_id = 1
 @onready var next_button    = $UI/NextLocation
 @onready var http_locations = $HTTPRequestLocations
 @onready var http_user = $HTTPRequestUser
+@onready var music_player = $MusicPlayer
+@onready var distance_label = $UI/Distance
+@onready var achievement_popup = $UI/AchievementPopup
 
 var is_touching = false
 var fish_on_timer = 0.0
@@ -76,6 +84,10 @@ func _ready():
 	_fetch_user_id()
 	fisher.setup(screen_w, screen_h, DOCK_Y_PCT, CENTER_X_PCT)
 	fish_manager.setup(screen_w, screen_h)
+	game_state.metrics_updated.connect(_on_metrics_updated)
+	game_state.achievement_unlocked.connect(_on_achievement_unlocked)
+	http_distance.request_completed.connect(_on_distance_saved)
+	
 
 	fishing_line.set_point_position(0, Vector2(screen_w * CENTER_X_PCT, screen_h * DOCK_Y_PCT))
 	fishing_line.set_point_position(1, Vector2(screen_w * CENTER_X_PCT, screen_h * DOCK_Y_PCT + 10))
@@ -90,6 +102,37 @@ func _ready():
 
 	status_label.text = "Tap or pedal to fish"
 
+func _on_metrics_updated(speed: float, cadence: float, distance: float):
+	# Keep real sensor distance for server saves / achievements
+	_distance_to_save = distance
+	# In-game label uses speed × playtime, accumulated in game_state
+	distance_label.text = "🚴 %.2f km" % (game_state.played_distance_m / 1000.0)
+
+
+func _save_distance():
+	var delta_m = _distance_to_save - _last_saved_distance
+	if delta_m <= 0:
+		return
+	_last_saved_distance = _distance_to_save
+	http_distance.request(
+		BASE_URL + "/player/distance?distance_m=%.1f&user_id=%d" % [delta_m, patient_id],
+		[],
+		HTTPClient.METHOD_POST
+	)
+
+func _on_distance_saved(_result, response_code, _headers, body):
+	if response_code != 200:
+		return
+	var json = JSON.new()
+	json.parse(body.get_string_from_utf8())
+	var data = json.get_data()
+	var new_achievements = data.get("new_achievements", [])
+	for ach in new_achievements:
+		achievement_popup.show_achievement(ach)
+
+func _on_achievement_unlocked(achievement: Dictionary):
+	achievement_popup.show_achievement(achievement)
+	
 func _on_collection_pressed():
 	get_tree().change_scene_to_file("res://scenes/collection.tscn")
 
@@ -103,11 +146,19 @@ func _setup_background():
 	bobber.size = Vector2(40, 40)  # adjust based on how big you want it
 
 func _process(delta):
-	game_state.is_moving = _get_is_moving()
+	var is_moving = _get_is_moving()
+	game_state.is_moving = is_moving
 	game_state.update(delta)
 	fish_manager.update(delta, screen_w)
 	_update_visuals()
 	_update_status_label()
+	distance_label.text = "%.2f km" % (game_state.played_distance_m / 1000.0)
+	
+	_save_timer += delta
+	if _save_timer >= SAVE_INTERVAL:
+		_save_timer = 0.0
+		_save_distance()
+		
 	if notification_timer > 0.0:
 		notification_timer -= delta
 		notification_label.modulate.a = notification_timer / NOTIFICATION_DURATION
@@ -157,9 +208,9 @@ func _update_status_label():
 	match game_state.state:
 		GameState.State.FISHING:
 			if game_state.sensor_active:
-				status_label.text = "Pedalling - line going deeper" if game_state.is_moving else "Stop pedalling - line rising"
+				status_label.text = "%.1f km/h · depth %.0f%%" % [game_state.current_speed_kmh, game_state.depth * 100]
 			else:
-				status_label.text = "Moving - line going deeper" if game_state.is_moving else "Tap or pedal to fish"
+				status_label.text = "Tap or pedal to fish"
 		GameState.State.REELING:
 			status_label.text = "Reeling... %.0f%%" % (game_state.reel_progress * 100)
 		GameState.State.REVEALING:
@@ -188,13 +239,23 @@ func _on_catch_response(_result, response_code, _headers, body):
 	var json = JSON.new()
 	json.parse(body.get_string_from_utf8())
 	var data = json.get_data()
-	var fish = data["fish"]
 
+	if data.get("missed", false):
+		_show_notification("The fish got away!")
+		game_state.reset()
+		status_label.text = "Tap or pedal to fish"
+		return
+
+	var fish = data["fish"]
 	var sprite = fish.get("sprite", "")
 	if sprite == null:
 		sprite = ""
 	catch_reveal.show_catch(fish["name"], fish["rarity"], fish["fact"], sprite)
-	_show_notification("🐟 %s added to collection!" % fish["name"])
+	_show_notification("%s added to collection!" % fish["name"])
+
+	var new_achievements = data.get("new_achievements", [])
+	for ach in new_achievements:
+		achievement_popup.show_achievement(ach)
 
 func _show_notification(text: String):
 	notification_label.text    = text
@@ -211,6 +272,10 @@ func _on_state_changed(new_state):
 		_show_fish_on()
 
 func _input(event):
+	# Start music on first interaction
+	if not music_player.playing:
+		music_player.play()
+
 	if event is InputEventScreenTouch:
 		if event.pressed:
 			var clicked = get_viewport().gui_get_focus_owner()
@@ -228,6 +293,10 @@ func _input(event):
 		else:
 			is_touching = false
 
+	if event is InputEventScreenDrag or event is InputEventMouseMotion:
+		if not music_player.playing:
+			music_player.play()
+			
 func _notification(what):
 	if what == NOTIFICATION_WM_SIZE_CHANGED:
 		var vp   = get_viewport().get_visible_rect().size
@@ -272,6 +341,55 @@ func _setup_button_style(button : Button):
 	
 func _setup_ui_theme():
 	_setup_button_style(collection_button)
+	
+	# Apply Nunito Bold font to key UI elements
+	var nunito_font = load("res://assets/fonts/Nunito-VariableFont_wght.ttf")
+	
+	# Setup notification label - centered at bottom with large font
+	notification_label.anchors_preset = 8  # Bottom center
+	notification_label.anchor_left = 0.5
+	notification_label.anchor_top = 1.0
+	notification_label.anchor_right = 0.5
+	notification_label.anchor_bottom = 1.0
+	notification_label.offset_left = -150
+	notification_label.offset_top = -120
+	notification_label.offset_right = 150
+	notification_label.offset_bottom = -20
+	notification_label.custom_minimum_size = Vector2(300, 80)
+	notification_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	notification_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	notification_label.add_theme_font_override("font", nunito_font)
+	notification_label.add_theme_font_size_override("font_size", 36)
+	notification_label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+	notification_label.add_theme_constant_override("outline_size", 3)
+	notification_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
+	notification_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	
+	# Setup Fish On label
+	fish_on_label.anchors_preset = 8
+	fish_on_label.anchor_left = 0.5
+	fish_on_label.anchor_top = 0.5
+	fish_on_label.anchor_right = 0.5
+	fish_on_label.anchor_bottom = 0.5
+	fish_on_label.offset_left = -60
+	fish_on_label.offset_top = -30
+	fish_on_label.offset_right = 60
+	fish_on_label.offset_bottom = 30
+	fish_on_label.add_theme_font_override("font", nunito_font)
+	fish_on_label.add_theme_font_size_override("font_size", 56)
+	fish_on_label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+	fish_on_label.add_theme_constant_override("outline_size", 4)
+	fish_on_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+	
+
+	
+	# Apply font to status label
+	status_label.add_theme_font_override("font", nunito_font)
+	status_label.add_theme_font_size_override("font_size", 20)
+	
+	# Apply font to distance label
+	distance_label.add_theme_font_override("font", nunito_font)
+	distance_label.add_theme_font_size_override("font_size", 22)
 
 
 
