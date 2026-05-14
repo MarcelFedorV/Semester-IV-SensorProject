@@ -88,6 +88,9 @@ func _ready():
 	game_state.achievement_unlocked.connect(_on_achievement_unlocked)
 	http_distance.request_completed.connect(_on_distance_saved)
 	
+	# Load persisted distance
+	game_state.load_distance()
+	
 
 	fishing_line.set_point_position(0, Vector2(screen_w * CENTER_X_PCT, screen_h * DOCK_Y_PCT))
 	fishing_line.set_point_position(1, Vector2(screen_w * CENTER_X_PCT, screen_h * DOCK_Y_PCT + 10))
@@ -134,6 +137,8 @@ func _on_achievement_unlocked(achievement: Dictionary):
 	achievement_popup.show_achievement(achievement)
 	
 func _on_collection_pressed():
+	# Save distance before changing scene
+	game_state.save_distance()
 	get_tree().change_scene_to_file("res://scenes/collection.tscn")
 
 func _setup_background():
@@ -153,6 +158,10 @@ func _process(delta):
 	_update_visuals()
 	_update_status_label()
 	distance_label.text = "%.2f km" % (game_state.played_distance_m / 1000.0)
+	
+	# Update _distance_to_save from game_state for manual movement
+	if not game_state.sensor_active:
+		_distance_to_save = game_state.total_distance_m
 	
 	_save_timer += delta
 	if _save_timer >= SAVE_INTERVAL:
@@ -467,6 +476,4 @@ func _on_prev_pressed():
 func _on_next_pressed():
 	current_location_index = min(locations.size() - 1, current_location_index + 1)
 	_update_location_display()
-	
-	
 	

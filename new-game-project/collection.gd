@@ -150,8 +150,20 @@ func _build_achievements(unlocked: Array, stats: Dictionary, all_achievements: A
 	var card_w = (vp.x - 48) / 3.0
 	var card_h = card_w * 0.9
 
+	# Load current session distance from save file
+	var session_km = 0.0
+	if FileAccess.file_exists("user://distance.save"):
+		var file = FileAccess.open("user://distance.save", FileAccess.READ)
+		if file:
+			session_km = file.get_float() / 1000.0
+			file.close()
+
+	# Get all-time database distance
+	var database_km = stats.get("total_distance_km", 0.0)
+
+	# Show both session and total distance
 	var stats_label = Label.new()
-	stats_label.text = "Total Distance: %.2f km" % stats.get("total_distance_km", 0.0)
+	stats_label.text = "Session: %.2f km | Total: %.2f km" % [session_km, database_km]
 	stats_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	stats_label.modulate = Color.WHITE
 	stats_label.add_theme_font_override("font", nunito_font)
