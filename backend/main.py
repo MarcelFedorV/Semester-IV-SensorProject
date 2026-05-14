@@ -37,6 +37,7 @@ from fish_data import FISH_BY_ID, FISH, LOCATIONS, MYSTERY_FISH_BY_LOCATION, LOC
 from sensor_device import BLEManager
 from achievements import ACHIEVEMENTS, ACHIEVEMENTS_BY_ID
 from fish_agent import FishAgent
+import fish_logic
 
 
 
@@ -497,13 +498,13 @@ async def get_me(request: Request):
 async def catch_fish(depth: float, patient_id: int = 1, location_id: int = 1):
     db = SessionLocal()
     try:
-        # Unified FishAgent system: each agent decides if it catches
+        # Get player's caught fish and check location completion
         caught = fishing_db.get_caught_ids(db, patient_id)
         location_fish = [f for f in FISH if f["location_id"] == location_id]
         location_fish_ids = {f["id"] for f in location_fish}
         location_complete = location_fish_ids.issubset(caught) if location_fish_ids else False
 
-        # Check if we should try a mystery fish
+        # Check if we should try a mystery fish (30% chance when location complete)
         use_mystery = location_complete and random.random() < 0.3
         if use_mystery:
             mystery = MYSTERY_FISH_BY_LOCATION.get(location_id)
@@ -511,23 +512,28 @@ async def catch_fish(depth: float, patient_id: int = 1, location_id: int = 1):
         else:
             pool = location_fish if location_fish else FISH
 
-        # Try each fish in pool — first one that catches wins
-        random.shuffle(pool)
-        caught_fish = None
-        for fish in pool:
-            agent = FishAgent(fish)
-            result = agent.run(depth, location_id)
-            if result["caught"]:
-                caught_fish = fish
-                break
-
-        if not caught_fish:
+        # Use fish_logic to pick a fish based on depth and rarity
+        selected_fish = fish_logic.pick_fish(depth, location_id, pool)
+        
+        if not selected_fish:
             return {
                 "fish": None,
                 "missed": True,
                 "new_achievements": []
             }
 
+        # Try to catch the selected fish
+        result = fish_logic.try_catch_fish(selected_fish, depth, location_id)
+
+        if not result["caught"]:
+            return {
+                "fish": None,
+                "missed": True,
+                "new_achievements": []
+            }
+
+        # Fish caught! Save and check achievements
+        caught_fish = selected_fish
         is_new = fishing_db.save_catch(db, patient_id, caught_fish["id"], location_id, depth)
         caught_after = fishing_db.get_caught_ids(db, patient_id)
         new_achievements = fishing_db.check_fishing_achievements(db, patient_id, caught_fish, caught_after)

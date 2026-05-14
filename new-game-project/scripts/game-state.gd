@@ -4,7 +4,7 @@ enum State { FISHING, REELING, REVEALING }
 
 const REEL_SPEED              = 0.3
 const REEL_DECAY              = 0.15
-const DEPTH_SPEED_MAX_KMH     = 20.0  # speed at which bobber is at full depth
+const DEPTH_SPEED_MAX_KMH     = 12.0  # FIXED: was 20.0 - speed at which bobber is at full depth
 const MANUAL_MOVE_SPEED_MPS   = 3.0   # fallback movement speed for clicks/touches
 var _catch_distance_m: float  = 100.0  # meters between catches (randomised)
 var _last_catch_distance_m: float = 0.0
@@ -53,12 +53,10 @@ func _process(delta: float) -> void:
 				_socket.connect_to_url(_get_ws_url())
 
 func _handle_ws_message(raw: String) -> void:
-	var parse_result = JSON.parse_string(raw)
-	if parse_result.error != OK:
+	var msg = JSON.parse_string(raw)
+	if msg == null or typeof(msg) != TYPE_DICTIONARY:
 		return
-	var msg: Dictionary = parse_result.result
-	if typeof(msg) != TYPE_DICTIONARY:
-		return
+	
 	match msg.get("type", ""):
 		"sensor_state":
 			sensor_active = msg.get("active", false)
@@ -124,3 +122,17 @@ func _set_state(new_state):
 		_catch_distance_m      = randf_range(100.0, 300.0)
 		_last_catch_distance_m = total_distance_m
 	state_changed.emit(new_state)
+
+# Distance persistence functions
+func save_distance():
+	var file = FileAccess.open("user://distance.save", FileAccess.WRITE)
+	if file:
+		file.store_float(played_distance_m)
+		file.close()
+
+func load_distance():
+	if FileAccess.file_exists("user://distance.save"):
+		var file = FileAccess.open("user://distance.save", FileAccess.READ)
+		if file:
+			played_distance_m = file.get_float()
+			file.close()
