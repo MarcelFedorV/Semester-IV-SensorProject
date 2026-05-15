@@ -57,7 +57,12 @@ from websockets.server import WebSocketServerProtocol
 
 # ── Import your existing BLE manager ─────────────────────────────────────────
 # Adjust the path / package name to match your project layout.
-from ble_manager import BLEManager
+import sys, os
+_sd = os.path.join(os.path.dirname(__file__), '..', 'backend', 'sensor_device')
+sys.path.insert(0, os.path.dirname(_sd))  # adds backend/ to path
+sys.path.insert(0, _sd)
+from sensor_device.ble_manager import BLEManager  # import as part of its package
+
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(
