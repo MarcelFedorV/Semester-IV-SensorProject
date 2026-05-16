@@ -370,6 +370,24 @@ async def serve_metrics(request: Request):
         return RedirectResponse("/login", status_code=302)
     return FileResponse("pages/metrics.html")
 
+@app.get("/games")
+async def serve_games(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
+    return FileResponse("pages/games.html")
+
+@app.get("/fishinggame")
+async def serve_fishinggame(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
+    return FileResponse("pages/fishinggame.html")
+
+@app.get("/spacefunk")
+async def serve_spacefunk(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
+    return FileResponse("pages/spacefunk.html")
+
 @app.get("/Start")
 async def landing(request: Request):
     if not request.session.get("user"):
@@ -659,14 +677,12 @@ print(f"[DEBUG] game path exists: {os.path.exists('games/FishingGame/index.html'
 
 if os.path.exists("games/FishingGame/index.html"):
     app.mount("/FishingGame", StaticFiles(directory="games/FishingGame", html=True), name="fishing")
-if os.path.exists("games/FishingGame/index.html"):
-    app.mount("/FishingGame", StaticFiles(directory="games/FishingGame", html=True), name="fishing")
 
 app.mount("/style", StaticFiles(directory="pages/styles"), name="style")
 app.mount("/languages", StaticFiles(directory="pages/languages"), name="languages")
 
-if os.path.exists("../space-game/index.html"):
-    app.mount("/SpaceFunk", StaticFiles(directory="../space-game", html=True), name="space")
+if os.path.exists("games/SpaceFunk/Space.html"):
+    app.mount("/SpaceFunk", StaticFiles(directory="games/SpaceFunk", html=True), name="space")
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
