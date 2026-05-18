@@ -1,0 +1,41 @@
+[gd_scene format=3 uid="uid://4mxuihnamxgb"]
+
+[ext_resource type="PackedScene" uid="uid://ccpqowwiibaar" path="res://Scene/player.tscn" id="1_6igcf"]
+[ext_resource type="PackedScene" uid="uid://brkyfcb02juot" path="res://Scene/chunk.tscn" id="2_u6khg"]
+[ext_resource type="Script" uid="uid://caapqy5cid7al" path="res://Scripts/LevelGenerator.gd" id="3_ou18a"]
+[ext_resource type="PackedScene" uid="uid://ck62bf3q1jffd" path="res://Scene/TouchControls.tscn" id="4_mopgc"]
+[ext_resource type="PackedScene" uid="uid://xf5v2ahs0dmh" path="res://Scene/Asteroid.tscn" id="5_ivtx6"]
+[ext_resource type="Script" uid="uid://bgqexx0t2jut5" path="res://Scripts/Asteroid.gd" id="6_3xgnh"]
+
+[node name="Game" type="Node2D" unique_id=1940250587]
+
+[node name="Player" parent="." unique_id=1798227887 node_paths=PackedStringArray("camera") instance=ExtResource("1_6igcf")]
+camera = NodePath("../Camera2D")
+
+[node name="ColorRect" type="ColorRect" parent="." unique_id=142869882]
+visible = false
+z_index = -2
+offset_left = -890.0
+offset_top = -801.0
+offset_right = 862.0
+offset_bottom = 951.0
+color = Color(0.99999994, 0.10750631, 0.013670866, 1)
+
+[node name="LevelGenerator" type="Node2D" parent="." unique_id=73675928]
+
+[node name="Chunk" parent="." unique_id=562283220 instance=ExtResource("2_u6khg")]
+position = Vector2(-250, 0)
+script = ExtResource("3_ou18a")
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=1424989398]
+position = Vector2(600, 0)
+zoom = Vector2(0.5, 0.5)
+
+[node name="TouchControls" parent="." unique_id=141027083 instance=ExtResource("4_mopgc")]
+z_index = 5
+position = Vector2(-300, 0)
+
+[node name="Asteroid" parent="." unique_id=1462688521 instance=ExtResource("5_ivtx6")]
+z_index = -2
+position = Vector2(-1507, 644)
+script = ExtResource("6_3xgnh")
