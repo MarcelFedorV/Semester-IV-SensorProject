@@ -4,7 +4,8 @@ enum State { FISHING, REELING, REVEALING }
 
 const REEL_SPEED              = 0.3
 const REEL_DECAY              = 0.15
-const DEPTH_SPEED_MAX_KMH     = 12.0  # FIXED: was 20.0 - speed at which bobber is at full depth
+const DEPTH_SPEED_MAX_KMH     = 20.0  # speed at which bobber is at full depth (NOT USED ANYMORE)
+const DEPTH_INCREASE_RATE     = 0.3   # Depth increases 30% per second while moving
 const MANUAL_MOVE_SPEED_MPS   = 3.0   # fallback movement speed for clicks/touches
 var _catch_distance_m: float  = 100.0  # meters between catches (randomised)
 var _last_catch_distance_m: float = 0.0
@@ -53,10 +54,12 @@ func _process(delta: float) -> void:
 				_socket.connect_to_url(_get_ws_url())
 
 func _handle_ws_message(raw: String) -> void:
-	var msg = JSON.parse_string(raw)
-	if msg == null or typeof(msg) != TYPE_DICTIONARY:
+	var parse_result = JSON.parse_string(raw)
+	if parse_result.error != OK:
 		return
-	
+	var msg: Dictionary = parse_result.result
+	if typeof(msg) != TYPE_DICTIONARY:
+		return
 	match msg.get("type", ""):
 		"sensor_state":
 			sensor_active = msg.get("active", false)
@@ -85,9 +88,14 @@ func update(delta: float):
 
 	match state:
 		State.FISHING:
-			# Depth driven by speed, or manual tap/click movement when sensor is inactive
-			var speed_target = clamp(current_speed_kmh / DEPTH_SPEED_MAX_KMH, 0.0, 1.0) if sensor_active else (0.5 if is_moving else 0.0)
-			depth = lerp(depth, speed_target, delta * 0.5)
+			# Depth increases over time while moving (not based on speed)
+			if is_moving:
+				# Increase depth continuously while moving
+				depth = min(depth + DEPTH_INCREASE_RATE * delta, 1.0)
+			else:
+				# Slowly float back up when not moving
+				depth = max(depth - 0.2 * delta, 0.0)
+			
 			# Catch triggered by distance travelled, not time
 			var dist_traveled = total_distance_m - _last_catch_distance_m
 			if dist_traveled >= _catch_distance_m:
@@ -122,17 +130,3 @@ func _set_state(new_state):
 		_catch_distance_m      = randf_range(100.0, 300.0)
 		_last_catch_distance_m = total_distance_m
 	state_changed.emit(new_state)
-
-# Distance persistence functions
-func save_distance():
-	var file = FileAccess.open("user://distance.save", FileAccess.WRITE)
-	if file:
-		file.store_float(played_distance_m)
-		file.close()
-
-func load_distance():
-	if FileAccess.file_exists("user://distance.save"):
-		var file = FileAccess.open("user://distance.save", FileAccess.READ)
-		if file:
-			played_distance_m = file.get_float()
-			file.close()
