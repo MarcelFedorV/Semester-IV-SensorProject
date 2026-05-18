@@ -16,6 +16,8 @@ mimetypes.add_type("application/wasm",        ".wasm")
 mimetypes.add_type("application/octet-stream", ".pck")
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from sqlalchemy.orm import Session
+from database import SessionLocal, engine, Base, run_migrations, get_db
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
@@ -24,7 +26,7 @@ from fish_data import FISH_BY_ID, FISH
 
 from ble_client import BLEClient
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Depends, Form
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Depends, Form, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -41,6 +43,9 @@ from sensor_device import BLEManager
 from achievements import ACHIEVEMENTS, ACHIEVEMENTS_BY_ID
 from fish_agent import FishAgent
 import fish_logic
+
+from fishing_models import PlayerStats
+from fishing_db import get_stats, get_collection, get_unlocked_achievements
 
 
 
@@ -676,7 +681,51 @@ async def get_player_stats(user_id: int):
         db.close()
 
 
+# this is the try to stream player stats to the html
+app.mount("/scripts", StaticFiles(directory="pages/scripts"), name="scripts")
 
+@app.get("/api/stats/me")
+async def my_stats(request: Request, db: Session = Depends(get_db)):
+    username = request.session.get("user")
+    if not username:
+        raise HTTPException(status_code=401, detail="Not logged in")
+    
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404)
+    
+    # fishing stats
+    total_catches = db.query(FishCatch).filter(FishCatch.user_id == user.id).count()
+    unique_fish = db.query(FishCollection).filter(FishCollection.user_id == user.id).count()
+    stats = get_stats(db, user.id)
+    achievements = get_unlocked_achievements(db, user.id)
+    
+    return {
+        "username": username,
+        "fishing": {
+            "total_catches": total_catches,
+            "unique_fish": unique_fish,
+            "total_distance_km": stats["total_distance_km"],
+            "total_sessions": stats["total_sessions"],
+            "achievements": len(achievements)
+        }
+    }
+
+@app.get("/api/stats/global")
+async def global_stats(db: Session = Depends(get_db)):
+    users = db.query(User).all()
+    result = []
+    for user in users:
+        total_catches = db.query(FishCatch).filter(FishCatch.user_id == user.id).count()
+        unique_fish = db.query(FishCollection).filter(FishCollection.user_id == user.id).count()
+        stats = get_stats(db, user.id)
+        result.append({
+            "username": user.username,
+            "total_catches": total_catches,
+            "unique_fish": unique_fish,
+            "total_distance_km": stats["total_distance_km"],
+        })
+    return result
 
 
 @app.get("/locations")
