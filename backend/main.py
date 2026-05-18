@@ -9,11 +9,15 @@ import asyncio
 import json
 import sys
 import random
+import mimetypes
+
+# Godot web export MIME types
+mimetypes.add_type("application/wasm",        ".wasm")
+mimetypes.add_type("application/octet-stream", ".pck")
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from starlette.middleware.base import BaseHTTPMiddleware
 import uvicorn
 from fish_logic import pick_fish
 from fish_data import FISH_BY_ID, FISH
@@ -23,11 +27,10 @@ from ble_client import BLEClient
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Depends, Form
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from passlib.context import CryptContext
-from database import SessionLocal, engine, Base
+from database import SessionLocal, engine, Base, run_migrations
 from models import User
 from fishing_models import FishCatch, FishCollection, AchievementUnlock
 import fishing_db
@@ -95,16 +98,30 @@ async def lifespan(app: FastAPI):
     await manager.disconnect()
     await manager.stop_scan()
 
-class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request, call_next):
-        response = await call_next(request)
-        response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
-        response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
-        return response
+class SecurityHeadersMiddleware:
+    """Pure ASGI middleware — streams large files without buffering."""
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        async def send_with_headers(message):
+            if message["type"] == "http.response.start":
+                headers = list(message.get("headers", []))
+                headers.append((b"cross-origin-opener-policy", b"same-origin"))
+                headers.append((b"cross-origin-embedder-policy", b"require-corp"))
+                message = {**message, "headers": headers}
+            await send(message)
+
+        await self.app(scope, receive, send_with_headers)
 
 app = FastAPI(lifespan=lifespan)
 
 Base.metadata.create_all(bind=engine)
+run_migrations(engine)
 app.add_middleware(SessionMiddleware, secret_key="your-secret-key-change-this")
 
 templates = Jinja2Templates(directory="pages")
@@ -465,40 +482,35 @@ async def handle_message(ws: WebSocket, msg: dict):
 async def serve_fishing_game(request: Request):
     if not request.session.get("user"):
         return RedirectResponse("/login", status_code=302)
-    return FileResponse("games/FishingGame/index.html")
+    return RedirectResponse("/FishingGame/", status_code=302)
 
-# Serve all other FishingGame assets without auth check
-@app.get("/FishingGame/{path:path}")
-async def serve_fishing_assets(path: str):
-    file_path = f"games/FishingGame/{path}"
-    if os.path.exists(file_path):
-        return FileResponse(file_path)
-    return FileResponse("games/FishingGame/index.html")
+# Assets are served by the StaticFiles mount at the bottom of this file
 
 
-@app.get("/index.js")
-async def serve_js():
-    return FileResponse("games/FishingGame/index.js")
+# These root-level asset routes are superseded by the /FishingGame StaticFiles mount
+# @app.get("/index.js")
+# async def serve_js():
+#     return FileResponse("games/FishingGame/index.js")
 
-@app.get("/index.wasm")
-async def serve_wasm():
-    return FileResponse("games/FishingGame/index.wasm")
+# @app.get("/index.wasm")
+# async def serve_wasm():
+#     return FileResponse("games/FishingGame/index.wasm")
 
-@app.get("/index.pck")
-async def serve_pck():
-    return FileResponse("games/FishingGame/index.pck")
+# @app.get("/index.pck")
+# async def serve_pck():
+#     return FileResponse("games/FishingGame/index.pck")
 
-@app.get("/index.png")
-async def serve_png():
-    return FileResponse("games/FishingGame/index.png")
+# @app.get("/index.png")
+# async def serve_png():
+#     return FileResponse("games/FishingGame/index.png")
 
-@app.get("/index.icon.png")
-async def serve_icon():
-    return FileResponse("games/FishingGame/index.icon.png")
+# @app.get("/index.icon.png")
+# async def serve_icon():
+#     return FileResponse("games/FishingGame/index.icon.png")
 
-@app.get("/index.audio.worklet.js")
-async def serve_audio_worklet():
-    return FileResponse("games/FishingGame/index.audio.worklet.js")
+# @app.get("/index.audio.worklet.js")
+# async def serve_audio_worklet():
+#     return FileResponse("games/FishingGame/index.audio.worklet.js")
 
 @app.get("/api/me")
 async def get_me(request: Request):
@@ -681,7 +693,7 @@ if os.path.exists("games/FishingGame/index.html"):
 app.mount("/style", StaticFiles(directory="pages/styles"), name="style")
 app.mount("/languages", StaticFiles(directory="pages/languages"), name="languages")
 
-if os.path.exists("games/SpaceFunk/Space.html"):
+if os.path.exists("games/SpaceFunk/index.html"):
     app.mount("/SpaceFunk", StaticFiles(directory="games/SpaceFunk", html=True), name="space")
 
 if __name__ == "__main__":
