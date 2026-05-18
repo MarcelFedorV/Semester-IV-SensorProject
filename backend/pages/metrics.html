@@ -4,10 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Developers</title>
-    <link rel="stylesheet" href="/style/common.css">
+    <title>Metrics</title>
+    <link rel="stylesheet" href="/style/common.css?v=20260518">
     <script src="/languages/scripts.js"></script>
     <script src="/languages/translations.js"></script>
+    <script src="/scripts/metrics.js" defer></script>
 </head>
 
 <body onload="loadLanguage();">
@@ -48,25 +49,109 @@
 
     <div class="main">
         <div class="card">
-
             <div class="card-header">
-                <div class="card-eyebrow">LET HERE BE METRICS</div>
 
-                <div class="card-eyebrow">maybe a grid that displays both games' metrics on two sides?</div>
-                <div class="card-eyebrow">in that way we have less pages, less buttons etc</div>
-
+                <div class="card-title">Player Statistics</div>
+                <div class="card-eyebrow">Fishing Game</div>
             </div>
 
-        </div>
-    </div>
-
-    <div style="float: right; position:absolute;right:0px;top:100px;" class="main">
-        <div class="card">
-
-            <div class="card-header">
-                <div class="card-title">BETA VERSION, THINGS WILL LOOK DIFFERENTLY</div>
+            <div class="tabs">
+                <button class="tab active" id="tab-me" onclick="switchTab('me')">My Stats</button>
+                <button class="tab" id="tab-global" onclick="switchTab('global')">Global Stats</button>
             </div>
 
+            <div class="tab-panel active" id="panel-me">
+                <table class="stats-table">
+                    <tr>
+                        <td>Total Catches</td>
+                        <td id="stat-catches">—</td>
+                    </tr>
+                    <tr>
+                        <td>Unique Fish</td>
+                        <td id="stat-unique">—</td>
+                    </tr>
+                    <tr>
+                        <td>Distance Cycled</td>
+                        <td id="stat-distance">—</td>
+                    </tr>
+                    <tr>
+                        <td>Sessions</td>
+                        <td id="stat-sessions">—</td>
+                    </tr>
+                    <tr>
+                        <td>Achievements</td>
+                        <td id="stat-achievements">—</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="tab-panel" id="panel-global">
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th>Player</th>
+                            <th>Catches</th>
+                            <th>Unique Fish</th>
+                            <th>Distance</th>
+                        </tr>
+                    </thead>
+                    <tbody id="global-tbody"></tbody>
+                </table>
+            </div>
+
+            <div>
+                <div>
+                    --------------------------------------------------------------------------------------------------------------
+                </div>
+            </div>
+
+            <div class="card-header">
+                <div class="card-eyebrow">Space Funk</div>
+            </div>
+
+            <div class="tabs">
+                <button class="tab active" id="tab-me" onclick="switchTab('me')">My Stats</button>
+                <button class="tab" id="tab-global" onclick="switchTab('global')">Global Stats</button>
+            </div>
+
+            <div class="tab-panel active" id="panel-me">
+                <table class="stats-table">
+                    <tr>
+                        <td>Total Catches</td>
+                        <td id="stat-catches">—</td>
+                    </tr>
+                    <tr>
+                        <td>Unique Fish</td>
+                        <td id="stat-unique">—</td>
+                    </tr>
+                    <tr>
+                        <td>Distance Cycled</td>
+                        <td id="stat-distance">—</td>
+                    </tr>
+                    <tr>
+                        <td>Sessions</td>
+                        <td id="stat-sessions">—</td>
+                    </tr>
+                    <tr>
+                        <td>Achievements</td>
+                        <td id="stat-achievements">—</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="tab-panel" id="panel-global">
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th>Player</th>
+                            <th>Catches</th>
+                            <th>Unique Fish</th>
+                            <th>Distance</th>
+                        </tr>
+                    </thead>
+                    <tbody id="global-tbody"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 

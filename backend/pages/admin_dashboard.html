@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard</title>
-    <link rel="stylesheet" href="/style/common.css">
+    <link rel="stylesheet" href="/style/common.css?v=20260518">
     <script src="/languages/scripts.js"></script>
     <script src="/languages/translations.js"></script>
     <style>
@@ -141,8 +141,12 @@
                     <div class="logo">
                         <div class="logo-icon"></div>
                         <div>
-                                                        <div class="logo-text"><p class="languageclass" id="logo-text">SensorProject</p></div>
-                            <div class="logo-sub"><p class="languageclass" id="logo-sub">Semester IV · Group 11</p></div>
+                            <div class="logo-text">
+                                <p class="languageclass" id="logo-text">SensorProject</p>
+                            </div>
+                            <div class="logo-sub">
+                                <p class="languageclass" id="logo-sub">Semester IV · Group 11</p>
+                            </div>
                         </div>
                     </div>
                 </a>
@@ -153,8 +157,10 @@
             ADMIN MODE
         </div>
         <div style="margin-left: auto; display: flex; align-items: center; gap: 16px;">
-            <span id="username-display" style="font-family: var(--mono); font-size: 11px; color: var(--text-dim);"></span>
-            <a href="#" onclick="handleLogout(); return false;" style="font-family: var(--mono); font-size: 11px; color: var(--accent); text-decoration: none; cursor: pointer;">
+            <span id="username-display"
+                style="font-family: var(--mono); font-size: 11px; color: var(--text-dim);"></span>
+            <a href="#" onclick="handleLogout(); return false;"
+                style="font-family: var(--mono); font-size: 11px; color: var(--accent); text-decoration: none; cursor: pointer;">
                 [LOGOUT]
             </a>
         </div>
@@ -199,22 +205,25 @@
                 </div>
                 <div class="input-group">
                     <label class="input-label">Role</label>
-                    <select id="new-role" style="width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 10px 14px; font-family: var(--mono); font-size: 12px; color: var(--text); outline: none; transition: border-color .15s;">
+                    <select id="new-role"
+                        style="width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 10px 14px; font-family: var(--mono); font-size: 12px; color: var(--text); outline: none; transition: border-color .15s;">
                         <option value="user">User</option>
                         <option value="admin">Admin</option>
                     </select>
                 </div>
-                <div id="create-error" style="color: #ff6b6b; font-size: 12px; margin-bottom: 10px; display: none;"></div>
-                <div id="create-success" style="color: #00ff9d; font-size: 12px; margin-bottom: 10px; display: none;"></div>
+                <div id="create-error" style="color: #ff6b6b; font-size: 12px; margin-bottom: 10px; display: none;">
+                </div>
+                <div id="create-success" style="color: #00ff9d; font-size: 12px; margin-bottom: 10px; display: none;">
+                </div>
                 <button class="btn btn-primary" onclick="createNewUser()">▶ Create User</button>
             </div>
 
             <div class="divider"></div>
-            
+
             <a href="/ble" class="btn btn-secondary">BLE Scanner</a>
-            
+
             <div class="divider"></div>
-            
+
             <a href="/" class="btn btn-secondary">← Back to Home</a>
 
         </div>
@@ -230,12 +239,12 @@
             try {
                 const response = await fetch('/api/check-admin');
                 const data = await response.json();
-                
+
                 if (!data.authenticated || !data.is_admin) {
                     window.location.href = '/admin/login';
                     return;
                 }
-                
+
                 document.getElementById('username-display').textContent = data.user;
                 loadUsers();
             } catch (error) {
@@ -261,7 +270,7 @@
 
                 const data = await response.json();
                 const usersList = document.getElementById('users-list');
-                
+
                 if (data.users.length === 0) {
                     usersList.innerHTML = '<p style="color: var(--text-dim); font-family: var(--mono); font-size: 11px;">No users found</p>';
                     return;
