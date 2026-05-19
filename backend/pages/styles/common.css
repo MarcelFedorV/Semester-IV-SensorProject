@@ -656,7 +656,7 @@ footer a {
         font-size: 23px;
     }
 
-    /* games page*/
+    /* games page */
     .games-grid {
         grid-template-columns: 1fr;
         gap: 12px;
@@ -675,4 +675,131 @@ footer a {
         max-height: 200px;
         object-fit: cover;
     }
+}
+
+/* ── Danger button variant ──────────────────────────────────────────────── */
+.btn-danger {
+    color: #ffffff;
+    background: var(--danger);
+    border-color: var(--danger);
+}
+
+.btn-danger:hover:not(:disabled) {
+    background: #b91c1c;
+    border-color: #b91c1c;
+}
+
+.btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* ── Sensor connect page ────────────────────────────────────────────────── */
+.sensor-card {
+    max-width: 420px;
+    margin: 40px auto;
+}
+
+/* BLE status indicator dot */
+.ble-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--border);
+    flex-shrink: 0;
+    transition: background 0.3s;
+}
+
+.ble-dot.connected    { background: #16a34a; }
+.ble-dot.connecting   { background: #ea580c; animation: ble-pulse 1s infinite; }
+.ble-dot.disconnected { background: #94a3b8; }
+
+@keyframes ble-pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.3; }
+}
+
+.ble-status-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.ble-status-text {
+    font-size: 14px;
+    color: var(--text-soft);
+}
+
+/* Metrics grid */
+.metrics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 24px;
+}
+
+.metric-box {
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 14px;
+    text-align: center;
+}
+
+.metric-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+    font-family: var(--mono);
+}
+
+.metric-unit {
+    font-size: 12px;
+    color: var(--text-soft);
+    margin-top: 4px;
+}
+
+.metric-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-family: var(--mono);
+}
+
+/* WebSocket status row */
+.ws-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 18px;
+    font-size: 12px;
+    color: var(--text-soft);
+    font-family: var(--mono);
+}
+
+.ws-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #94a3b8;
+    flex-shrink: 0;
+}
+
+.ws-dot.ok  { background: #16a34a; }
+.ws-dot.err { background: var(--danger); }
+
+/* No Web Bluetooth warning */
+.no-ble {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 13px;
+    color: #b91c1c;
+    margin-bottom: 18px;
+    display: none;
 }

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sensor</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            background: transparent;
+            overflow: hidden;
+            font-family: 'Manrope', 'Segoe UI', sans-serif;
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.96);
+            border: 1px solid #e2e8f0;
+            border-radius: 999px;
+            padding: 0 14px;
+            height: 42px;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.10);
+            white-space: nowrap;
+            box-sizing: border-box;
+            max-width: 100%;
+        }
+
+        .ble-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #94a3b8;
+            flex-shrink: 0;
+            transition: background 0.3s;
+        }
+        .ble-dot.connected    { background: #16a34a; }
+        .ble-dot.connecting   { background: #ea580c; animation: pulse 1s infinite; }
+        .ble-dot.disconnected { background: #94a3b8; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.3; }
+        }
+
+        .status-text {
+            font-size: 12px;
+            color: #475569;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .btn-connect {
+            border: none;
+            border-radius: 999px;
+            background: #2563eb;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 5px 11px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.15s;
+            flex-shrink: 0;
+        }
+        .btn-connect:hover:not(:disabled) { background: #1d4ed8; }
+        .btn-connect:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-connect.hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="pill">
+        <div class="ble-dot disconnected" id="bleDot"></div>
+        <span class="status-text" id="bleStatus">Sensor</span>
+        <button class="btn-connect" id="btnConnect">Connect</button>
+    </div>
+    <script src="/scripts/sensor_frame.js?v=6" defer></script>
+</body>
+</html>

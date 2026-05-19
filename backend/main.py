@@ -97,11 +97,21 @@ manager.on_metrics = _on_metrics
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await manager.connect_to_bridge()
+    if os.getenv("BLE_BRIDGE_ENABLED", "false").lower() == "true":
+        try:
+            await manager.connect_to_bridge()
+        except Exception as e:
+            print(f"[BLE] Bridge not available ({e}) — running without BLE bridge")
+    else:
+        print("[BLE] Bridge disabled — using Web Bluetooth (browser-side)")
     print("[Server] Ready at http://localhost:8000")
     yield
-    await manager.disconnect()
-    await manager.stop_scan()
+    if manager.is_bridge_connected:
+        try:
+            await manager.disconnect()
+            await manager.stop_scan()
+        except Exception:
+            pass
 
 class SecurityHeadersMiddleware:
     """Pure ASGI middleware — streams large files without buffering."""
@@ -404,6 +414,18 @@ async def serve_fishinggame(request: Request):
         return RedirectResponse("/login", status_code=302)
     return FileResponse("pages/fishinggame.html")
 
+@app.get("/sensor")
+async def serve_sensor(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
+    return FileResponse("pages/sensor_connect.html")
+
+@app.get("/sensor-frame")
+async def serve_sensor_frame(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
+    return FileResponse("pages/sensor_frame.html")
+
 @app.get("/spacefunk")
 async def serve_spacefunk(request: Request):
     if not request.session.get("user"):
@@ -422,8 +444,9 @@ async def websocket_endpoint(ws: WebSocket):
     connections.append(ws)
     print(f"[WS] Browser connected ({len(connections)} total)")
     await ws.send_text(json.dumps({"type": "init"}))
-    await manager.get_devices()  # result broadcasts via on_devices_list
-    await manager.get_status()   # result broadcasts via on_status
+    if manager.is_bridge_connected:
+        await manager.get_devices()  # result broadcasts via on_devices_list
+        await manager.get_status()   # result broadcasts via on_status
 
     async def heartbeat():
         while True:
@@ -479,6 +502,19 @@ async def handle_message(ws: WebSocket, msg: dict):
         current_mode = msg.get("current_mode")
         if address and current_mode:
             asyncio.create_task(manager.do_mode_switch(address, current_mode))
+
+    elif action == "sensor_metrics":
+        # Phone is sending live BLE sensor data — broadcast to all clients
+        active = msg.get("active", False)
+        asyncio.create_task(broadcast({"type": "sensor_state", "active": active}))
+        asyncio.create_task(broadcast({
+            "type":        "metrics",
+            "speed_ms":    msg.get("speed_ms",    0),
+            "speed_kmh":   msg.get("speed_kmh",   0),
+            "cadence_rpm": msg.get("cadence_rpm", 0),
+            "distance_m":  msg.get("distance_m",  0),
+            "distance_km": msg.get("distance_km", 0),
+        }))
 
 
 
@@ -740,6 +776,7 @@ if os.path.exists("games/FishingGame/index.html"):
     app.mount("/FishingGame", StaticFiles(directory="games/FishingGame", html=True), name="fishing")
 
 app.mount("/style", StaticFiles(directory="pages/styles"), name="style")
+app.mount("/scripts", StaticFiles(directory="pages/scripts"), name="scripts")
 app.mount("/languages", StaticFiles(directory="pages/languages"), name="languages")
 
 if os.path.exists("games/SpaceFunk/index.html"):
