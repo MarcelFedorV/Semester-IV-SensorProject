@@ -1,13 +1,17 @@
 // ── Constants ────────────────────────────────────────────────────────────────
 const CSC_SERVICE     = '00001816-0000-1000-8000-00805f9b34fb';
 const CSC_MEASUREMENT = '00002a5b-0000-1000-8000-00805f9b34fb';
+const SC_CP           = '00002a55-0000-1000-8000-00805f9b34fb';
 
-// ── CSCMetrics — port of sensor_device/metrics.py ───────────────────────────
-const WHEEL_CIRCUMFERENCE = 2.1;   // metres, 700c × 25mm tyre
-const GEAR_RATIO          = 2.8;   // wheel revs per crank rev
-const TIME_RESOLUTION     = 1024;  // ticks per second
-const STOP_TIMEOUT_MS     = 2000;  // ms of silence before declaring stopped
+// XOSS proprietary service / characteristic for mode switching
+const NUS_SERVICE     = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+const NUS_UNK         = '6e400004-b5a3-f393-e0a9-e50e24dcca9e';
 
+const WHEEL_CIRCUMFERENCE = 2.1;
+const GEAR_RATIO          = 2.8;
+const TIME_RESOLUTION     = 1024;
+
+// ── CSCMetrics ───────────────────────────────────────────────────────────────
 class CSCMetrics {
     constructor() {
         this._lastWheelRevs = null;
@@ -17,8 +21,6 @@ class CSCMetrics {
         this.distanceM  = 0;
         this.speedMs    = 0;
         this.cadenceRpm = 0;
-        this._frozenCount = 0;
-        this._lastRevKey  = null;
     }
 
     update(dataView) {
@@ -27,31 +29,13 @@ class CSCMetrics {
         const hasWheel = !!(flags & 0x01);
         const hasCrank = !!(flags & 0x02);
 
-        // Read raw cumulative counters to detect if wheel/crank actually moved
-        let revKey = null;
-        if (hasWheel && dataView.byteLength >= offset + 6)
-            revKey = dataView.getUint32(offset, true) + ':' + dataView.getUint32(offset, true);
-        else if (hasCrank && dataView.byteLength >= (hasWheel ? offset + 6 + 4 : offset + 4))
-            revKey = 'c:' + dataView.getUint16(hasWheel ? offset + 6 : offset, true);
-
-        if (revKey !== null && revKey === this._lastRevKey) {
-            this._frozenCount++;
-            if (this._frozenCount >= 2) {
-                this.speedMs    = 0;
-                this.cadenceRpm = 0;
-            }
-        } else {
-            this._frozenCount = 0;
-            this._lastRevKey  = revKey;
-        }
-
         if (hasWheel && dataView.byteLength >= offset + 6)
             offset = this._parseWheel(dataView, offset);
 
         if (hasCrank && dataView.byteLength >= offset + 4)
             this._parseCrank(dataView, offset, !hasWheel);
 
-        return this._snapshot();
+        return { flags, hasWheel, hasCrank, ...this._snapshot() };
     }
 
     _parseWheel(dv, offset) {
@@ -62,14 +46,11 @@ class CSCMetrics {
             const dRevs = (wheelRevs - this._lastWheelRevs) >>> 0;
             const dTime = (wheelTime - this._lastWheelTime) & 0xFFFF;
             if (dRevs > 0 && dTime > 0) {
-                // Actual new revolution — update speed and distance
                 const s    = dTime / TIME_RESOLUTION;
                 const dist = dRevs * WHEEL_CIRCUMFERENCE;
                 this.distanceM += dist;
                 this.speedMs    = dist / s;
             }
-            // Frozen packet (dRevs=0 or dTime=0): keep last speed.
-            // The interval's distance-freeze detection will zero it if truly stopped.
         }
         this._lastWheelRevs = wheelRevs;
         this._lastWheelTime = wheelTime;
@@ -84,7 +65,6 @@ class CSCMetrics {
             const dRevs = (crankRevs - this._lastCrankRevs) & 0xFFFF;
             const dTime = (crankTime - this._lastCrankTime) & 0xFFFF;
             if (dRevs > 0 && dTime > 0) {
-                // Actual new crank revolution — update cadence and optionally speed
                 const s         = dTime / TIME_RESOLUTION;
                 this.cadenceRpm = (dRevs / s) * 60;
                 if (deriveSpeed) {
@@ -93,7 +73,6 @@ class CSCMetrics {
                     this.distanceM += this.speedMs * s;
                 }
             }
-            // Frozen packet: keep last cadence/speed.
         }
         this._lastCrankRevs = crankRevs;
         this._lastCrankTime = crankTime;
@@ -121,6 +100,7 @@ const bleDot      = document.getElementById('bleDot');
 const bleStatus   = document.getElementById('bleStatus');
 const btnConnect  = document.getElementById('btnConnect');
 const btnDisc     = document.getElementById('btnDisconnect');
+const btnSwitch   = document.getElementById('btnSwitch');
 const wsDot       = document.getElementById('wsDot');
 const wsStatusEl  = document.getElementById('wsStatus');
 const metSpeed    = document.getElementById('metSpeed');
@@ -129,28 +109,39 @@ const metDistance = document.getElementById('metDistance');
 
 // ── State ────────────────────────────────────────────────────────────────────
 const metrics = new CSCMetrics();
-let   device             = null;
-let   ws                 = null;
-let   sensorActive       = false;
-let   lastNotificationMs = 0;
+let   device              = null;
+let   ws                  = null;
+let   sensorActive        = false;
+let   lastNotificationMs  = 0;
+let   currentMode         = null;  // 'speed' | 'cadence' | 'combined'
+let   isSwitching         = false;
 
-// ── Web Bluetooth availability check ────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function makeCmd(v) {
+    return new Uint8Array([0x30, v, 0x30 ^ v]);
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// ── Web Bluetooth check ──────────────────────────────────────────────────────
 if (!navigator.bluetooth) {
     document.getElementById('noBle').style.display = 'block';
     btnConnect.disabled = true;
 }
 
-// ── WebSocket to backend ─────────────────────────────────────────────────────
+// ── WebSocket ────────────────────────────────────────────────────────────────
 function connectWS() {
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
     ws = new WebSocket(`${proto}//${location.host}/ws`);
 
     ws.onopen = () => {
-        wsDot.className       = 'ws-dot ok';
+        wsDot.className        = 'ws-dot ok';
         wsStatusEl.textContent = 'Backend connected';
     };
     ws.onclose = () => {
-        wsDot.className       = 'ws-dot err';
+        wsDot.className        = 'ws-dot err';
         wsStatusEl.textContent = 'Backend disconnected — retrying…';
         setTimeout(connectWS, 3000);
     };
@@ -167,19 +158,32 @@ function sendToBackend(metricsData, active) {
     }
 }
 
-// ── BLE helpers ──────────────────────────────────────────────────────────────
+// ── BLE state ────────────────────────────────────────────────────────────────
 function setBleState(state, text) {
     bleDot.className      = `ble-dot ${state}`;
     bleStatus.textContent = text;
 }
 
+function updateSwitchButton() {
+    if (!currentMode || currentMode === 'combined' || isSwitching) {
+        btnSwitch.style.display = 'none';
+        return;
+    }
+    const target = currentMode === 'speed' ? 'Cadence' : 'Speed';
+    btnSwitch.textContent   = `⇄ Switch to ${target}`;
+    btnSwitch.style.display = 'inline-block';
+    btnSwitch.disabled      = false;
+}
+
+// ── BLE connect ──────────────────────────────────────────────────────────────
 async function connect() {
     try {
         setBleState('connecting', 'Scanning…');
         btnConnect.disabled = true;
 
         device = await navigator.bluetooth.requestDevice({
-            filters: [{ services: [CSC_SERVICE] }],
+            filters:          [{ services: [CSC_SERVICE] }],
+            optionalServices: [NUS_SERVICE],
         });
 
         device.addEventListener('gattserverdisconnected', onDisconnected);
@@ -190,6 +194,7 @@ async function connect() {
         const char    = await service.getCharacteristic(CSC_MEASUREMENT);
 
         metrics.reset();
+        currentMode = null;
         await char.startNotifications();
         char.addEventListener('characteristicvaluechanged', onCSC);
 
@@ -205,22 +210,44 @@ async function connect() {
 }
 
 function onCSC(event) {
-    const data = metrics.update(event.target.value);
+    const result = metrics.update(event.target.value);
     lastNotificationMs = Date.now();
     sensorActive = true;
-    updateUI(data);
+    updateUI(metrics._snapshot());
+
+    // Detect sensor mode on first notification
+    if (currentMode === null) {
+        if (result.hasWheel && !result.hasCrank) currentMode = 'speed';
+        else if (result.hasCrank && !result.hasWheel) currentMode = 'cadence';
+        else if (result.hasWheel && result.hasCrank)  currentMode = 'combined';
+        updateSwitchButton();
+    }
+}
+
+function onDisconnected() {
+    if (isSwitching) return;  // switch handler manages its own state
+    setBleState('disconnected', 'Disconnected');
+    btnConnect.disabled = false;
+    btnDisc.disabled    = true;
+    btnSwitch.style.display = 'none';
+    sensorActive        = false;
+    currentMode         = null;
+    sendToBackend({ speed_ms: 0, speed_kmh: 0, cadence_rpm: 0, distance_m: 0, distance_km: 0 }, false);
+}
+
+async function disconnect() {
+    if (device && device.gatt.connected) {
+        await device.gatt.disconnect();
+    }
 }
 
 // ── 1-second send interval ───────────────────────────────────────────────────
-// Distance-based stop detection: only zero out after 3 consecutive ticks
-// with no distance change (~3 s). A single frozen tick can happen at low
-// speeds (slow wheel revolution > 1 s) and shouldn't count as stopped.
 let _lastTickDistance = -1;
 let _frozenTicks      = 0;
 const FROZEN_THRESHOLD = 5;
 
 setInterval(() => {
-    if (device && device.gatt.connected) {
+    if (device && device.gatt.connected && !isSwitching) {
         if (metrics.distanceM === _lastTickDistance) {
             _frozenTicks++;
             if (_frozenTicks >= FROZEN_THRESHOLD) {
@@ -244,24 +271,117 @@ function updateUI(data) {
     metDistance.textContent = data.distance_km.toFixed(2);
 }
 
-function onDisconnected() {
-    setBleState('disconnected', 'Disconnected');
-    btnConnect.disabled = false;
-    btnDisc.disabled    = true;
-    sensorActive        = false;
-    clearTimeout(stopTimer);
-    sendToBackend({ speed_ms: 0, speed_kmh: 0, cadence_rpm: 0, distance_m: 0, distance_km: 0 }, false);
-}
+// ── XOSS mode switch ─────────────────────────────────────────────────────────
+async function switchMode() {
+    if (!device || !currentMode || currentMode === 'combined' || isSwitching) return;
 
-async function disconnect() {
-    if (device && device.gatt.connected) {
-        await device.gatt.disconnect();
+    const targetMode = currentMode === 'speed' ? 'cadence' : 'speed';
+    isSwitching = true;
+    btnSwitch.style.display = 'none';
+    btnConnect.disabled     = true;
+    btnDisc.disabled        = true;
+
+    setBleState('connecting', `Switching to ${targetMode}…`);
+
+    try {
+        if (!device.gatt.connected) {
+            setBleState('connecting', 'Reconnecting for switch…');
+            await device.gatt.connect();
+        }
+
+        const server = device.gatt;
+
+        // Stop CSC notifications
+        try {
+            const cscSvc  = await server.getPrimaryService(CSC_SERVICE);
+            const cscChar = await cscSvc.getCharacteristic(CSC_MEASUREMENT);
+            await cscChar.stopNotifications();
+        } catch (_) {}
+
+        const rebootPromise = new Promise(resolve => {
+            device.addEventListener('gattserverdisconnected', resolve, { once: true });
+        });
+
+        const nusSvc  = await server.getPrimaryService(NUS_SERVICE);
+        const nusChar = await nusSvc.getCharacteristic(NUS_UNK);
+
+        if (targetMode === 'cadence') {
+            await xossToCadence(nusChar);
+        } else {
+            const cscSvc = await server.getPrimaryService(CSC_SERVICE);
+            const scCp   = await cscSvc.getCharacteristic(SC_CP);
+            await xossToSpeed(nusChar, scCp);
+        }
+
+        setBleState('connecting', 'Waiting for reboot…');
+        await Promise.race([rebootPromise, sleep(15000)]);
+
+        setBleState('disconnected', `→ ${targetMode} mode — reconnect`);
+        currentMode = targetMode;
+
+    } catch (err) {
+        console.error('[Switch]', err);
+        setBleState('disconnected', `Switch failed — reconnect`);
+    } finally {
+        isSwitching         = false;
+        sensorActive        = false;
+        btnConnect.disabled = false;
+        btnDisc.disabled    = true;
     }
 }
 
-// ── Event listeners ──────────────────────────────────────────────────────────
+async function xossToCadence(nusChar) {
+    const ticks = [];
+    const onTick = (event) => {
+        const data = new Uint8Array(event.target.value.buffer);
+        if (data.length >= 3 && data[0] === 0x31 && data[2] === (0x31 ^ data[1]))
+            ticks.push(data[1]);
+    };
+    try {
+        nusChar.addEventListener('characteristicvaluechanged', onTick);
+        await nusChar.startNotifications();
+    } catch (_) {}
+
+    await nusChar.writeValueWithoutResponse(makeCmd(0x01));
+    await sleep(500);
+
+    const counter = ticks.length > 0 ? ticks[ticks.length - 1] : 0x01;
+    const jump    = (0x24 - counter) & 0xFF;
+    setBleState('connecting', `Jumping +0x${jump.toString(16).toUpperCase().padStart(2, '0')}…`);
+    await nusChar.writeValueWithoutResponse(makeCmd(jump));
+}
+
+async function xossToSpeed(nusChar, scCp) {
+    await xossSetLocation(scCp, 0x04);
+    try { await nusChar.startNotifications(); } catch (_) {}
+
+    for (let val = 0; val < 0x100; val++) {
+        if (!device || !device.gatt.connected) break;
+        try {
+            await nusChar.writeValueWithoutResponse(makeCmd(val));
+        } catch (_) { break; }
+        if (val % 32 === 0)
+            setBleState('connecting', `Sweep 0x${val.toString(16).padStart(2, '0')}/0xFF…`);
+        await sleep(80);
+    }
+}
+
+async function xossSetLocation(scCp, loc) {
+    return new Promise(async (resolve) => {
+        const timer = setTimeout(resolve, 3000);
+        try {
+            scCp.addEventListener('characteristicvaluechanged', () => { clearTimeout(timer); resolve(); }, { once: true });
+            await scCp.startNotifications();
+            await scCp.writeValueWithResponse(new Uint8Array([0x03, loc]));
+        } catch (_) {
+            clearTimeout(timer);
+            resolve();
+        }
+    });
+}
+
+// ── Events & boot ────────────────────────────────────────────────────────────
 btnConnect.addEventListener('click', connect);
 btnDisc.addEventListener('click', disconnect);
-
-// ── Boot ─────────────────────────────────────────────────────────────────────
+btnSwitch.addEventListener('click', switchMode);
 connectWS();
