@@ -1,68 +1,204 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Games</title>
     <link rel="stylesheet" href="/style/common.css?v=20260518">
     <script src="/style/common.js" defer></script>
+    <style>
+        .game-picker {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 16px;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .game-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+            box-shadow: var(--shadow);
+            text-decoration: none;
+        }
+
+        .game-card:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.10), var(--shadow);
+            transform: translateY(-2px);
+        }
+
+        .game-card img {
+            width: 100%;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .game-card-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        /* Game shell */
+        .game-shell {
+            display: none;
+            flex-direction: column;
+            width: 100%;
+            height: calc(100vh - 57px - 45px);
+        }
+
+        .game-shell.active { display: flex; }
+
+        .game-topbar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .game-topbar-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .game-back-btn {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--surface-muted);
+            color: var(--text-dim);
+            font-size: 12px;
+            font-weight: 600;
+            padding: 5px 12px;
+            cursor: pointer;
+            font-family: var(--sans);
+            transition: background 0.15s;
+        }
+
+        .game-back-btn:hover { background: #eef2f7; }
+
+        .game-frame {
+            flex: 1;
+            border: none;
+            width: 100%;
+        }
+
+        .main.shell-mode {
+            padding: 0;
+            width: 100%;
+            max-width: 100%;
+            align-items: stretch;
+            flex-direction: column;
+        }
+    </style>
 </head>
-
 <body>
-
     <div class="grid-bg"></div>
     <div class="glow"></div>
 
+    <!-- Persistent BLE sensor widget -->
+    <iframe src="/sensor-frame"
+            allow="bluetooth"
+            style="position:fixed;bottom:18px;right:18px;width:220px;height:44px;border:none;z-index:9999;background:transparent;"
+    ></iframe>
+
     <header>
         <div class="logo">
-            <div>
-                <a href="/" class="logo-link">
-                    <div class="logo">
-                        <div class="logo-icon"></div>
-                        <div>
-                            <div class="logo-text">
-                                <p class="languageclass" id="logo-text">SensorProject</p>
-                            </div>
-                            <div class="logo-sub">
-                                <p class="languageclass" id="logo-sub">Semester IV · Group 11</p>
-                            </div>
-                        </div>
+            <a href="/" class="logo-link">
+                <div class="logo">
+                    <div class="logo-icon"></div>
+                    <div>
+                        <div class="logo-text"><p>SensorProject</p></div>
+                        <div class="logo-sub"><p>Semester IV · Group 11</p></div>
                     </div>
-                </a>
-            </div>
+                </div>
+            </a>
         </div>
-        <div class="card-eyebrow"><a href="/metrics" style="text-decoration: none; color: inherit;">Metrics</a></div>
-        <div class="card-eyebrow"><a href="/games" style="text-decoration: none; color: inherit;">Games</a></div>
+        <div class="card-eyebrow"><a href="/metrics" style="text-decoration:none;color:inherit;">Metrics</a></div>
+        <div class="card-eyebrow" id="nav-games" style="cursor:pointer;">Games</div>
         <div class="header-right">
-            <select id="langSwitcher" name="language" style="margin-right:16px;"
-                onchange="setLanguage(this); saveLanguage();">
-                <option value="en">EN</option>
-                <option value="dk">DK</option>
-            </select>
             <span class="status-dot"></span>
             system online
         </div>
     </header>
 
-    <div class="main">
-        <div class="games-grid">
-            <a href="/FishingGame" class="game-card">
+    <!-- Game picker -->
+    <div class="main" id="pickerArea">
+        <div class="game-picker">
+            <div class="game-card" onclick="launchGame('fishing')">
                 <img src="/style/fishing.png" alt="Fishing Game">
                 <div class="game-card-title">Fishing Game</div>
-            </a>
-            <a href="/SpaceFunk/Space.html" class="game-card">
+            </div>
+            <div class="game-card" onclick="launchGame('spacefunk')">
                 <img src="/style/space.png" alt="Space Funk">
                 <div class="game-card-title">Space Funk</div>
-            </a>
-            <div class="game-card">
+            </div>
+            <div class="game-card" style="cursor:default;opacity:0.5;">
                 <img src="/style/more.png" alt="More soon">
                 <div class="game-card-title">More games coming soon</div>
             </div>
         </div>
     </div>
 
+    <!-- Game shell -->
+    <div class="main shell-mode" id="shellArea" style="display:none;">
+        <div class="game-shell active">
+            <div class="game-topbar">
+                <button class="game-back-btn" onclick="exitGame()">← Back to Games</button>
+                <span class="game-topbar-title" id="gameTitle"></span>
+            </div>
+            <iframe class="game-frame" id="gameFrame" src="" allowfullscreen></iframe>
+        </div>
+    </div>
+
     <footer>
         SEMESTER-IV-SENSORPROJECT &nbsp;·&nbsp; Meet the team of <a href="/developers">Group 11</a>
     </footer>
+
+    <script>
+        const GAMES = {
+            fishing:   { title: 'Fishing Game', src: '/FishingGame/index.html' },
+            spacefunk: { title: 'Space Funk',   src: '/SpaceFunk/index.html'   },
+        };
+
+        const pickerArea = document.getElementById('pickerArea');
+        const shellArea  = document.getElementById('shellArea');
+        const gameFrame  = document.getElementById('gameFrame');
+        const gameTitle  = document.getElementById('gameTitle');
+
+        function launchGame(key) {
+            const game = GAMES[key];
+            if (!game) return;
+            gameTitle.textContent    = game.title;
+            gameFrame.src            = game.src;
+            pickerArea.style.display = 'none';
+            shellArea.style.display  = 'flex';
+            history.pushState({ game: key }, '', '/games/' + key);
+        }
+
+        function exitGame() {
+            gameFrame.src            = '';
+            pickerArea.style.display = '';
+            shellArea.style.display  = 'none';
+            history.pushState({}, '', '/games');
+        }
+
+        window.addEventListener('popstate', (e) => {
+            if (e.state && e.state.game) launchGame(e.state.game);
+            else exitGame();
+        });
+
+        document.getElementById('nav-games').addEventListener('click', exitGame);
+    </script>
 </body>
+</html>
