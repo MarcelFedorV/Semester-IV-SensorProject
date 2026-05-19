@@ -408,6 +408,14 @@ async def serve_games(request: Request):
         return RedirectResponse("/login", status_code=302)
     return FileResponse("pages/games.html")
 
+@app.get("/games/{slug}")
+async def serve_games_slug(request: Request, slug: str):
+    # Catch-all so /games/fishing and /games/spacefunk survive a hard reload.
+    # The JS reads location.pathname on load and auto-launches the right game.
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
+    return FileResponse("pages/games.html")
+
 @app.get("/fishinggame")
 async def serve_fishinggame(request: Request):
     if not request.session.get("user"):

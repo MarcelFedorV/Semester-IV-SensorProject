@@ -199,6 +199,10 @@
         });
 
         document.getElementById('nav-games').addEventListener('click', exitGame);
+
+        // Auto-launch from URL on load — handles hard reloads of /games/fishing etc.
+        const urlSlug = location.pathname.match(/^\/games\/([^/]+)/)?.[1];
+        if (urlSlug && GAMES[urlSlug]) launchGame(urlSlug);
     </script>
 </body>
 </html>

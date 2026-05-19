@@ -53,10 +53,9 @@
             text-overflow: ellipsis;
         }
 
-        .btn-connect {
+        .btn-pill {
             border: none;
             border-radius: 999px;
-            background: #2563eb;
             color: #fff;
             font-size: 11px;
             font-weight: 700;
@@ -66,17 +65,23 @@
             transition: background 0.15s;
             flex-shrink: 0;
         }
-        .btn-connect:hover:not(:disabled) { background: #1d4ed8; }
-        .btn-connect:disabled { opacity: 0.4; cursor: not-allowed; }
-        .btn-connect.hidden { display: none; }
+        .btn-pill:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-pill.hidden   { display: none; }
+
+        #btnConnect { background: #2563eb; }
+        #btnConnect:hover:not(:disabled) { background: #1d4ed8; }
+
+        #btnSwitch  { background: #7c3aed; font-size: 10px; }
+        #btnSwitch:hover:not(:disabled)  { background: #6d28d9; }
     </style>
 </head>
 <body>
     <div class="pill">
         <div class="ble-dot disconnected" id="bleDot"></div>
         <span class="status-text" id="bleStatus">Sensor</span>
-        <button class="btn-connect" id="btnConnect">Connect</button>
+        <button class="btn-pill hidden" id="btnSwitch">⇄ SPD</button>
+        <button class="btn-pill" id="btnConnect">Connect</button>
     </div>
-    <script src="/scripts/sensor_frame.js?v=6" defer></script>
+    <script src="/scripts/sensor_frame.js?v=8" defer></script>
 </body>
 </html>
