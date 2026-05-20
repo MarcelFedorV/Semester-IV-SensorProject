@@ -726,9 +726,6 @@ async def get_player_stats(user_id: int):
         db.close()
 
 
-# this is the try to stream player stats to the html
-app.mount("/scripts", StaticFiles(directory="pages/scripts"), name="scripts")
-
 @app.post("/spacefunk/score")
 async def save_spacefunk_score(score: int, distance_m: float, user_id: int):
     db = SessionLocal()
@@ -798,6 +795,7 @@ async def global_stats(db: Session = Depends(get_db)):
             "total_distance_km": stats["total_distance_km"],
             "sf_best_score":     sf_best_score,
             "sf_total_distance_km": sf_total_dist,
+            "sf_total_runs":     len(sf_runs),
         })
     return result
 

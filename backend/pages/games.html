@@ -203,8 +203,8 @@
             history.pushState({}, '', '/games');
         }
 
-        window.addEventListener('popstate', (e) => {
-            if (e.state && e.state.game) launchGame(e.state.game);
+        window.addEventListener('popstate', async (e) => {
+            if (e.state && e.state.game) await launchGame(e.state.game);
             else exitGame();
         });
 
