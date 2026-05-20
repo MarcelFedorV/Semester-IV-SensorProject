@@ -35,6 +35,7 @@ from passlib.context import CryptContext
 from database import SessionLocal, engine, Base, run_migrations
 from models import User
 from fishing_models import FishCatch, FishCollection, AchievementUnlock
+from spacefunk_models import SpaceFunkRun
 import fishing_db
 import bcrypt
 import uvicorn
@@ -728,31 +729,53 @@ async def get_player_stats(user_id: int):
 # this is the try to stream player stats to the html
 app.mount("/scripts", StaticFiles(directory="pages/scripts"), name="scripts")
 
+@app.post("/spacefunk/score")
+async def save_spacefunk_score(score: int, distance_m: float, user_id: int):
+    db = SessionLocal()
+    try:
+        run = SpaceFunkRun(user_id=user_id, score=score, distance_m=distance_m)
+        db.add(run)
+        db.commit()
+        return {"ok": True}
+    finally:
+        db.close()
+
 @app.get("/api/stats/me")
 async def my_stats(request: Request, db: Session = Depends(get_db)):
     username = request.session.get("user")
     if not username:
         raise HTTPException(status_code=401, detail="Not logged in")
-    
+
     user = db.query(User).filter(User.username == username).first()
     if not user:
         raise HTTPException(status_code=404)
-    
-    # fishing stats
+
+    # Fishing stats
     total_catches = db.query(FishCatch).filter(FishCatch.user_id == user.id).count()
-    unique_fish = db.query(FishCollection).filter(FishCollection.user_id == user.id).count()
-    stats = get_stats(db, user.id)
-    achievements = get_unlocked_achievements(db, user.id)
-    
+    unique_fish   = db.query(FishCollection).filter(FishCollection.user_id == user.id).count()
+    stats         = get_stats(db, user.id)
+    achievements  = get_unlocked_achievements(db, user.id)
+
+    # SpaceFunk stats
+    sf_runs = db.query(SpaceFunkRun).filter(SpaceFunkRun.user_id == user.id).all()
+    sf_best_score   = max((r.score      for r in sf_runs), default=0)
+    sf_total_dist   = round(sum(r.distance_m for r in sf_runs) / 1000, 2)
+    sf_total_runs   = len(sf_runs)
+
     return {
         "username": username,
         "fishing": {
-            "total_catches": total_catches,
-            "unique_fish": unique_fish,
+            "total_catches":    total_catches,
+            "unique_fish":      unique_fish,
             "total_distance_km": stats["total_distance_km"],
-            "total_sessions": stats["total_sessions"],
-            "achievements": len(achievements)
-        }
+            "total_sessions":   stats["total_sessions"],
+            "achievements":     len(achievements),
+        },
+        "spacefunk": {
+            "total_runs":       sf_total_runs,
+            "best_score":       sf_best_score,
+            "total_distance_km": sf_total_dist,
+        },
     }
 
 @app.get("/api/stats/global")
@@ -761,13 +784,20 @@ async def global_stats(db: Session = Depends(get_db)):
     result = []
     for user in users:
         total_catches = db.query(FishCatch).filter(FishCatch.user_id == user.id).count()
-        unique_fish = db.query(FishCollection).filter(FishCollection.user_id == user.id).count()
-        stats = get_stats(db, user.id)
+        unique_fish   = db.query(FishCollection).filter(FishCollection.user_id == user.id).count()
+        stats         = get_stats(db, user.id)
+
+        sf_runs       = db.query(SpaceFunkRun).filter(SpaceFunkRun.user_id == user.id).all()
+        sf_best_score = max((r.score for r in sf_runs), default=0)
+        sf_total_dist = round(sum(r.distance_m for r in sf_runs) / 1000, 2)
+
         result.append({
-            "username": user.username,
-            "total_catches": total_catches,
-            "unique_fish": unique_fish,
+            "username":          user.username,
+            "total_catches":     total_catches,
+            "unique_fish":       unique_fish,
             "total_distance_km": stats["total_distance_km"],
+            "sf_best_score":     sf_best_score,
+            "sf_total_distance_km": sf_total_dist,
         })
     return result
 

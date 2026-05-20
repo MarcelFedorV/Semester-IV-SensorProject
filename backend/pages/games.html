@@ -171,16 +171,26 @@
             spacefunk: { title: 'Space Funk',   src: '/SpaceFunk/index.html'   },
         };
 
+        // Fetch user id once so we can pass it to games that need it
+        let _userId = -1;
+        const _userIdReady = fetch('/api/me')
+            .then(r => r.ok ? r.json() : null)
+            .then(d => { if (d && d.id) _userId = d.id; })
+            .catch(() => {});
+
         const pickerArea = document.getElementById('pickerArea');
         const shellArea  = document.getElementById('shellArea');
         const gameFrame  = document.getElementById('gameFrame');
         const gameTitle  = document.getElementById('gameTitle');
 
-        function launchGame(key) {
+        async function launchGame(key) {
             const game = GAMES[key];
             if (!game) return;
             gameTitle.textContent    = game.title;
-            gameFrame.src            = game.src;
+            // Wait for user id to be ready before launching
+            await _userIdReady;
+            const uid = _userId > 0 ? _userId : -1;
+            gameFrame.src            = game.src + (uid > 0 ? '?uid=' + uid : '');
             pickerArea.style.display = 'none';
             shellArea.style.display  = 'flex';
             history.pushState({ game: key }, '', '/games/' + key);

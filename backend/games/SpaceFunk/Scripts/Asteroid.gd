@@ -3,7 +3,7 @@ extends Area2D
 const SPEED = 400.0
 var level_generator: Node = null
 
-func _physics_process(delta: float) -> void:
+func _process(delta: float) -> void:
 	position.x -= SPEED * delta
 
 func _on_body_entered(body: Node2D) -> void:

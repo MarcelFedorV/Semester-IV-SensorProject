@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://ck62bf3q1jffd"]
 
 [ext_resource type="Texture2D" uid="uid://cpney5n38x1kb" path="res://Scene/But.png" id="1_85h40"]
+[ext_resource type="Texture2D" uid="uid://6bmfprps5d0d" path="res://Scene/pause-button.png" id="2_05q8u"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_05q8u"]
 
@@ -32,3 +33,10 @@ position = Vector2(858, 426.00003)
 scale = Vector2(60, 70)
 shape = SubResource("RectangleShape2D_05q8u")
 action = "fire"
+
+[node name="PAUSE" type="TouchScreenButton" parent="CanvasLayer/Control" unique_id=577794705]
+position = Vector2(135, 132)
+rotation = 3.1415927
+scale = Vector2(0.16414438, 0.16414438)
+texture_normal = ExtResource("2_05q8u")
+action = "pause"

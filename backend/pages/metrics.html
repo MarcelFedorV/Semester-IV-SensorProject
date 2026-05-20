@@ -99,57 +99,44 @@
                 </table>
             </div>
 
-            <div>
-                <div>
-                    --------------------------------------------------------------------------------------------------------------
-                </div>
-            </div>
+            <div style="border-top: 1px solid var(--border); margin: 24px 0;"></div>
 
             <div class="card-header">
-                <div class="card-eyebrow">Space Funk</div>
+                <div class="card-title">Space Funk</div>
             </div>
 
             <div class="tabs">
-                <button class="tab active" id="tab-me" onclick="switchTab('me')">My Stats</button>
-                <button class="tab" id="tab-global" onclick="switchTab('global')">Global Stats</button>
+                <button class="tab active" id="sf-tab-me" onclick="switchSFTab('me')">My Stats</button>
+                <button class="tab" id="sf-tab-global" onclick="switchSFTab('global')">Leaderboard</button>
             </div>
 
-            <div class="tab-panel active" id="panel-me">
+            <div class="tab-panel active" id="sf-panel-me">
                 <table class="stats-table">
                     <tr>
-                        <td>Total Catches</td>
-                        <td id="stat-catches">—</td>
+                        <td>Total Runs</td>
+                        <td id="sf-stat-runs">—</td>
                     </tr>
                     <tr>
-                        <td>Unique Fish</td>
-                        <td id="stat-unique">—</td>
+                        <td>Best Score</td>
+                        <td id="sf-stat-score">—</td>
                     </tr>
                     <tr>
                         <td>Distance Cycled</td>
-                        <td id="stat-distance">—</td>
-                    </tr>
-                    <tr>
-                        <td>Sessions</td>
-                        <td id="stat-sessions">—</td>
-                    </tr>
-                    <tr>
-                        <td>Achievements</td>
-                        <td id="stat-achievements">—</td>
+                        <td id="sf-stat-distance">—</td>
                     </tr>
                 </table>
             </div>
 
-            <div class="tab-panel" id="panel-global">
+            <div class="tab-panel" id="sf-panel-global">
                 <table class="stats-table">
                     <thead>
                         <tr>
                             <th>Player</th>
-                            <th>Catches</th>
-                            <th>Unique Fish</th>
+                            <th>Best Score</th>
                             <th>Distance</th>
                         </tr>
                     </thead>
-                    <tbody id="global-tbody"></tbody>
+                    <tbody id="sf-global-tbody"></tbody>
                 </table>
             </div>
         </div>
