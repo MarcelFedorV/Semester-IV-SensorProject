@@ -1,0 +1,51 @@
+[gd_scene format=3 uid="uid://ht4r5vcowayo"]
+
+[ext_resource type="Script" uid="uid://dektbw0gco4s3" path="res://collection.gd" id="1_mldy4"]
+
+[node name="Collection" type="Control" unique_id=354212943]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("1_mldy4")
+
+[node name="Background" type="ColorRect" parent="." unique_id=1614127541]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="BackButton" type="Button" parent="." unique_id=1375705051]
+layout_mode = 0
+offset_right = 8.0
+offset_bottom = 8.0
+
+[node name="Title" type="Label" parent="." unique_id=829542698]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="ScrollContainer" type="ScrollContainer" parent="." unique_id=1987417580]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+mouse_filter = 0
+
+[node name="VBox" type="GridContainer" parent="ScrollContainer" unique_id=551966072]
+layout_mode = 2
+
+[node name="HTTPRequest" type="HTTPRequest" parent="." unique_id=1275414653]
+
+[node name="TabScroll" type="ScrollContainer" parent="." unique_id=891776920]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+horizontal_scroll_mode = 0
+
+[node name="TabBar" type="HBoxContainer" parent="TabScroll" unique_id=845801637]
+layout_mode = 2
+
+[node name="HTTPRequestUser" type="HTTPRequest" parent="." unique_id=292365460]
+
+[node name="HTTPRequestAchievements" type="HTTPRequest" parent="." unique_id=1402135227]
+
+[node name="HTTPRequestAllAchievements" type="HTTPRequest" parent="." unique_id=677584262]

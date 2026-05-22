@@ -1,9 +1,14 @@
 extends CharacterBody2D
 
+const BASE_URL = "https://game.sensorproject.org"
+
 @export var camera: Camera2D
 @export var fuel_label: Label
 @export var hp_label: Label
 @export var score_label: Label
+@export var distance_label: Label
+@export var http_user: HTTPRequest
+@export var http_score: HTTPRequest
 
 const DODGE_SPEED: float            = 500.0
 const FIRE_COOLDOWN: float          = 1.0
@@ -23,6 +28,9 @@ var fuel: float                = 100.0
 var fuel_drain_timer: float    = 0.0
 var external_charge: float     = 0.0
 var score: int                 = 0
+var current_speed_kmh: float   = 0.0
+var played_distance_m: float   = 0.0
+var user_id: int               = -1
 var _socket := WebSocketPeer.new()
 
 
@@ -44,9 +52,26 @@ func _ready() -> void:
 	else:
 		ws_url = "ws://localhost:8000/ws"
 	_socket.connect_to_url(ws_url)
+	_fetch_user_id()
 
 
-func _process(delta: float) -> void:
+func _fetch_user_id() -> void:
+	if http_user:
+		http_user.request(BASE_URL + "/api/me")
+		http_user.request_completed.connect(_on_user_loaded)
+
+
+func _on_user_loaded(_result, response_code, _headers, body) -> void:
+	if response_code != 200:
+		print("Not authenticated")
+		return
+	var data = JSON.parse_string(body.get_string_from_utf8())
+	if data:
+		user_id = int(data["id"])
+		print("Logged in as user id: ", user_id)
+
+
+func _process(_delta: float) -> void:
 	_poll_socket()
 
 
@@ -98,17 +123,16 @@ func _poll_socket() -> void:
 
 
 func _handle_ws_message(raw: String) -> void:
-	var parse_result = JSON.parse_string(raw)
-	if parse_result.error != OK:
-		return
-	var msg: Dictionary = parse_result.result
-	if typeof(msg) != TYPE_DICTIONARY:
+	var msg = JSON.parse_string(raw)
+	if msg == null:
 		return
 	match msg.get("type", ""):
 		"sensor_state":
 			external_charge = 1.0 if msg.get("active", false) else 0.0
 		"disconnected":
 			external_charge = 0.0
+		"metrics":
+			current_speed_kmh = msg.get("speed_kmh", 0.0)
 
 
 # ── Combat ────────────────────────────────────────────────────────────────────
@@ -141,7 +165,18 @@ func add_score(amount: int = 1) -> void:
 
 func _die() -> void:
 	print("Player died!")
+	_save_run()
 	get_tree().reload_current_scene()
+
+
+func _save_run() -> void:
+	if user_id == -1 or not http_score:
+		return
+	http_score.request(
+		BASE_URL + "/spacefunk/score?score=%d&distance_m=%.1f&user_id=%d" % [score, played_distance_m, user_id],
+		[],
+		HTTPClient.METHOD_POST
+	)
 
 
 # ── Fuel ──────────────────────────────────────────────────────────────────────
@@ -159,3 +194,8 @@ func _handle_fuel(delta: float) -> void:
 
 	if fuel_label:
 		fuel_label.text = "Fuel: " + str(int(fuel))
+
+	if external_charge > 0.0:
+		played_distance_m += (current_speed_kmh / 3.6) * delta
+	if distance_label:
+		distance_label.text = "Traveled: %.2f km" % (played_distance_m / 1000.0)

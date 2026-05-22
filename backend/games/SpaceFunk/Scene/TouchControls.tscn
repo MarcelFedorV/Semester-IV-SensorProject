@@ -1,0 +1,42 @@
+[gd_scene format=3 uid="uid://ck62bf3q1jffd"]
+
+[ext_resource type="Texture2D" uid="uid://cpney5n38x1kb" path="res://Scene/But.png" id="1_85h40"]
+[ext_resource type="Texture2D" uid="uid://6bmfprps5d0d" path="res://Scene/pause-button.png" id="2_05q8u"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_05q8u"]
+
+[node name="TouchControls" type="Node2D" unique_id=141027083]
+
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=1110067722]
+layer = 5
+
+[node name="Control" type="Control" parent="CanvasLayer" unique_id=1912434363]
+layout_mode = 3
+anchors_preset = 0
+offset_top = -2.0
+offset_right = 1280.0
+offset_bottom = 718.0
+
+[node name="UP" type="TouchScreenButton" parent="CanvasLayer/Control" unique_id=1100373352]
+position = Vector2(130, 430)
+rotation = 3.1415927
+texture_normal = ExtResource("1_85h40")
+action = "move_up"
+
+[node name="DOWN" type="TouchScreenButton" parent="CanvasLayer/Control" unique_id=1876765943]
+position = Vector2(50, 535)
+texture_normal = ExtResource("1_85h40")
+action = "move_down"
+
+[node name="FIRE" type="TouchScreenButton" parent="CanvasLayer/Control" unique_id=557623561]
+position = Vector2(858, 426.00003)
+scale = Vector2(60, 70)
+shape = SubResource("RectangleShape2D_05q8u")
+action = "fire"
+
+[node name="PAUSE" type="TouchScreenButton" parent="CanvasLayer/Control" unique_id=577794705]
+position = Vector2(135, 132)
+rotation = 3.1415927
+scale = Vector2(0.16414438, 0.16414438)
+texture_normal = ExtResource("2_05q8u")
+action = "pause"

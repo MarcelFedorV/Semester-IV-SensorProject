@@ -546,6 +546,88 @@ footer a {
     border-color: #fde68a;
 }
 
+
+/* styling for the /games page */
+
+.games-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
+    padding: 24px 20px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.game-card {
+    border: none;
+    border-radius: 12px;
+    overflow: hidden;
+    text-decoration: none;
+    color: var(--text);
+    background: var(--surface);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.game-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow);
+}
+
+.game-card img {
+    width: 100%;
+    aspect-ratio: 16/9;
+    object-fit: cover;
+    display: block;
+}
+
+.game-card-title {
+    padding: 12px;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+/* metrics page  */
+
+.stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.stats-table td,
+.stats-table th {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+}
+
+.stats-table th {
+    font-weight: 600;
+    color: var(--text-dim);
+    font-size: 12px;
+}
+
+.stats-table tr:last-child td {
+    border-bottom: none;
+}
+
+
+/* developers */
+
+.dev-card {
+    gap: 20px;
+    padding: 24px 20px;
+    max-width: 300px;
+    margin: 0 auto;
+    border: none;
+    border-radius: 12px;
+    overflow: hidden;
+    text-decoration: none;
+    color: var(--text);
+    background: var(--surface);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
 @media (max-width: 760px) {
     header {
         padding: 12px 14px;
@@ -561,7 +643,8 @@ footer a {
     }
 
     .main {
-        padding: 18px 12px;
+        padding: 12px;
+        width: 100%;
     }
 
     .card {
@@ -572,4 +655,151 @@ footer a {
     .card-title {
         font-size: 23px;
     }
+
+    /* games page */
+    .games-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        padding: 0;
+        max-width: 100%;
+        width: 100%;
+    }
+
+    .game-card {
+        width: 100%;
+    }
+
+    .game-card img {
+        max-width: 100%;
+        height: auto;
+        max-height: 200px;
+        object-fit: cover;
+    }
+}
+
+/* ── Danger button variant ──────────────────────────────────────────────── */
+.btn-danger {
+    color: #ffffff;
+    background: var(--danger);
+    border-color: var(--danger);
+}
+
+.btn-danger:hover:not(:disabled) {
+    background: #b91c1c;
+    border-color: #b91c1c;
+}
+
+.btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* ── Sensor connect page ────────────────────────────────────────────────── */
+.sensor-card {
+    max-width: 420px;
+    margin: 40px auto;
+}
+
+/* BLE status indicator dot */
+.ble-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--border);
+    flex-shrink: 0;
+    transition: background 0.3s;
+}
+
+.ble-dot.connected    { background: #16a34a; }
+.ble-dot.connecting   { background: #ea580c; animation: ble-pulse 1s infinite; }
+.ble-dot.disconnected { background: #94a3b8; }
+
+@keyframes ble-pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.3; }
+}
+
+.ble-status-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.ble-status-text {
+    font-size: 14px;
+    color: var(--text-soft);
+}
+
+/* Metrics grid */
+.metrics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 24px;
+}
+
+.metric-box {
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 14px;
+    text-align: center;
+}
+
+.metric-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+    font-family: var(--mono);
+}
+
+.metric-unit {
+    font-size: 12px;
+    color: var(--text-soft);
+    margin-top: 4px;
+}
+
+.metric-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-family: var(--mono);
+}
+
+/* WebSocket status row */
+.ws-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 18px;
+    font-size: 12px;
+    color: var(--text-soft);
+    font-family: var(--mono);
+}
+
+.ws-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #94a3b8;
+    flex-shrink: 0;
+}
+
+.ws-dot.ok  { background: #16a34a; }
+.ws-dot.err { background: var(--danger); }
+
+/* No Web Bluetooth warning */
+.no-ble {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 13px;
+    color: #b91c1c;
+    margin-bottom: 18px;
+    display: none;
 }

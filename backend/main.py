@@ -9,27 +9,33 @@ import asyncio
 import json
 import sys
 import random
+import mimetypes
+
+# Godot web export MIME types
+mimetypes.add_type("application/wasm",        ".wasm")
+mimetypes.add_type("application/octet-stream", ".pck")
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from sqlalchemy.orm import Session
+from database import SessionLocal, engine, Base, run_migrations, get_db
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from starlette.middleware.base import BaseHTTPMiddleware
 import uvicorn
 from fish_logic import pick_fish
 from fish_data import FISH_BY_ID, FISH
 
 from ble_client import BLEClient
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Depends, Form
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Depends, Form, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from passlib.context import CryptContext
-from database import SessionLocal, engine, Base
+from database import SessionLocal, engine, Base, run_migrations
 from models import User
 from fishing_models import FishCatch, FishCollection, AchievementUnlock
+from spacefunk_models import SpaceFunkRun
 import fishing_db
 import bcrypt
 import uvicorn
@@ -38,6 +44,9 @@ from sensor_device import BLEManager
 from achievements import ACHIEVEMENTS, ACHIEVEMENTS_BY_ID
 from fish_agent import FishAgent
 import fish_logic
+
+from fishing_models import PlayerStats
+from fishing_db import get_stats, get_collection, get_unlocked_achievements
 
 
 
@@ -89,22 +98,46 @@ manager.on_metrics = _on_metrics
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await manager.connect_to_bridge()
+    if os.getenv("BLE_BRIDGE_ENABLED", "false").lower() == "true":
+        try:
+            await manager.connect_to_bridge()
+        except Exception as e:
+            print(f"[BLE] Bridge not available ({e}) — running without BLE bridge")
+    else:
+        print("[BLE] Bridge disabled — using Web Bluetooth (browser-side)")
     print("[Server] Ready at http://localhost:8000")
     yield
-    await manager.disconnect()
-    await manager.stop_scan()
+    if manager.is_bridge_connected:
+        try:
+            await manager.disconnect()
+            await manager.stop_scan()
+        except Exception:
+            pass
 
-class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request, call_next):
-        response = await call_next(request)
-        response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
-        response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
-        return response
+class SecurityHeadersMiddleware:
+    """Pure ASGI middleware — streams large files without buffering."""
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        async def send_with_headers(message):
+            if message["type"] == "http.response.start":
+                headers = list(message.get("headers", []))
+                headers.append((b"cross-origin-opener-policy", b"same-origin"))
+                headers.append((b"cross-origin-embedder-policy", b"require-corp"))
+                message = {**message, "headers": headers}
+            await send(message)
+
+        await self.app(scope, receive, send_with_headers)
 
 app = FastAPI(lifespan=lifespan)
 
 Base.metadata.create_all(bind=engine)
+run_migrations(engine)
 app.add_middleware(SessionMiddleware, secret_key="your-secret-key-change-this")
 
 templates = Jinja2Templates(directory="pages")
@@ -370,6 +403,44 @@ async def serve_metrics(request: Request):
         return RedirectResponse("/login", status_code=302)
     return FileResponse("pages/metrics.html")
 
+@app.get("/games")
+async def serve_games(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
+    return FileResponse("pages/games.html")
+
+@app.get("/games/{slug}")
+async def serve_games_slug(request: Request, slug: str):
+    # Catch-all so /games/fishing and /games/spacefunk survive a hard reload.
+    # The JS reads location.pathname on load and auto-launches the right game.
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
+    return FileResponse("pages/games.html")
+
+@app.get("/fishinggame")
+async def serve_fishinggame(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
+    return FileResponse("pages/fishinggame.html")
+
+@app.get("/sensor")
+async def serve_sensor(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
+    return FileResponse("pages/sensor_connect.html")
+
+@app.get("/sensor-frame")
+async def serve_sensor_frame(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
+    return FileResponse("pages/sensor_frame.html")
+
+@app.get("/spacefunk")
+async def serve_spacefunk(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse("/login", status_code=302)
+    return FileResponse("pages/spacefunk.html")
+
 @app.get("/Start")
 async def landing(request: Request):
     if not request.session.get("user"):
@@ -382,8 +453,9 @@ async def websocket_endpoint(ws: WebSocket):
     connections.append(ws)
     print(f"[WS] Browser connected ({len(connections)} total)")
     await ws.send_text(json.dumps({"type": "init"}))
-    await manager.get_devices()  # result broadcasts via on_devices_list
-    await manager.get_status()   # result broadcasts via on_status
+    if manager.is_bridge_connected:
+        await manager.get_devices()  # result broadcasts via on_devices_list
+        await manager.get_status()   # result broadcasts via on_status
 
     async def heartbeat():
         while True:
@@ -440,6 +512,19 @@ async def handle_message(ws: WebSocket, msg: dict):
         if address and current_mode:
             asyncio.create_task(manager.do_mode_switch(address, current_mode))
 
+    elif action == "sensor_metrics":
+        # Phone is sending live BLE sensor data — broadcast to all clients
+        active = msg.get("active", False)
+        asyncio.create_task(broadcast({"type": "sensor_state", "active": active}))
+        asyncio.create_task(broadcast({
+            "type":        "metrics",
+            "speed_ms":    msg.get("speed_ms",    0),
+            "speed_kmh":   msg.get("speed_kmh",   0),
+            "cadence_rpm": msg.get("cadence_rpm", 0),
+            "distance_m":  msg.get("distance_m",  0),
+            "distance_km": msg.get("distance_km", 0),
+        }))
+
 
 
 
@@ -447,40 +532,35 @@ async def handle_message(ws: WebSocket, msg: dict):
 async def serve_fishing_game(request: Request):
     if not request.session.get("user"):
         return RedirectResponse("/login", status_code=302)
-    return FileResponse("games/FishingGame/index.html")
+    return RedirectResponse("/FishingGame/", status_code=302)
 
-# Serve all other FishingGame assets without auth check
-@app.get("/FishingGame/{path:path}")
-async def serve_fishing_assets(path: str):
-    file_path = f"games/FishingGame/{path}"
-    if os.path.exists(file_path):
-        return FileResponse(file_path)
-    return FileResponse("games/FishingGame/index.html")
+# Assets are served by the StaticFiles mount at the bottom of this file
 
 
-@app.get("/index.js")
-async def serve_js():
-    return FileResponse("games/FishingGame/index.js")
+# These root-level asset routes are superseded by the /FishingGame StaticFiles mount
+# @app.get("/index.js")
+# async def serve_js():
+#     return FileResponse("games/FishingGame/index.js")
 
-@app.get("/index.wasm")
-async def serve_wasm():
-    return FileResponse("games/FishingGame/index.wasm")
+# @app.get("/index.wasm")
+# async def serve_wasm():
+#     return FileResponse("games/FishingGame/index.wasm")
 
-@app.get("/index.pck")
-async def serve_pck():
-    return FileResponse("games/FishingGame/index.pck")
+# @app.get("/index.pck")
+# async def serve_pck():
+#     return FileResponse("games/FishingGame/index.pck")
 
-@app.get("/index.png")
-async def serve_png():
-    return FileResponse("games/FishingGame/index.png")
+# @app.get("/index.png")
+# async def serve_png():
+#     return FileResponse("games/FishingGame/index.png")
 
-@app.get("/index.icon.png")
-async def serve_icon():
-    return FileResponse("games/FishingGame/index.icon.png")
+# @app.get("/index.icon.png")
+# async def serve_icon():
+#     return FileResponse("games/FishingGame/index.icon.png")
 
-@app.get("/index.audio.worklet.js")
-async def serve_audio_worklet():
-    return FileResponse("games/FishingGame/index.audio.worklet.js")
+# @app.get("/index.audio.worklet.js")
+# async def serve_audio_worklet():
+#     return FileResponse("games/FishingGame/index.audio.worklet.js")
 
 @app.get("/api/me")
 async def get_me(request: Request):
@@ -646,7 +726,78 @@ async def get_player_stats(user_id: int):
         db.close()
 
 
+@app.post("/spacefunk/score")
+async def save_spacefunk_score(score: int, distance_m: float, user_id: int):
+    db = SessionLocal()
+    try:
+        run = SpaceFunkRun(user_id=user_id, score=score, distance_m=distance_m)
+        db.add(run)
+        db.commit()
+        return {"ok": True}
+    finally:
+        db.close()
 
+@app.get("/api/stats/me")
+async def my_stats(request: Request, db: Session = Depends(get_db)):
+    username = request.session.get("user")
+    if not username:
+        raise HTTPException(status_code=401, detail="Not logged in")
+
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404)
+
+    # Fishing stats
+    total_catches = db.query(FishCatch).filter(FishCatch.user_id == user.id).count()
+    unique_fish   = db.query(FishCollection).filter(FishCollection.user_id == user.id).count()
+    stats         = get_stats(db, user.id)
+    achievements  = get_unlocked_achievements(db, user.id)
+
+    # SpaceFunk stats
+    sf_runs = db.query(SpaceFunkRun).filter(SpaceFunkRun.user_id == user.id).all()
+    sf_best_score   = max((r.score      for r in sf_runs), default=0)
+    sf_total_dist   = round(sum(r.distance_m for r in sf_runs) / 1000, 2)
+    sf_total_runs   = len(sf_runs)
+
+    return {
+        "username": username,
+        "fishing": {
+            "total_catches":    total_catches,
+            "unique_fish":      unique_fish,
+            "total_distance_km": stats["total_distance_km"],
+            "total_sessions":   stats["total_sessions"],
+            "achievements":     len(achievements),
+        },
+        "spacefunk": {
+            "total_runs":       sf_total_runs,
+            "best_score":       sf_best_score,
+            "total_distance_km": sf_total_dist,
+        },
+    }
+
+@app.get("/api/stats/global")
+async def global_stats(db: Session = Depends(get_db)):
+    users = db.query(User).all()
+    result = []
+    for user in users:
+        total_catches = db.query(FishCatch).filter(FishCatch.user_id == user.id).count()
+        unique_fish   = db.query(FishCollection).filter(FishCollection.user_id == user.id).count()
+        stats         = get_stats(db, user.id)
+
+        sf_runs       = db.query(SpaceFunkRun).filter(SpaceFunkRun.user_id == user.id).all()
+        sf_best_score = max((r.score for r in sf_runs), default=0)
+        sf_total_dist = round(sum(r.distance_m for r in sf_runs) / 1000, 2)
+
+        result.append({
+            "username":          user.username,
+            "total_catches":     total_catches,
+            "unique_fish":       unique_fish,
+            "total_distance_km": stats["total_distance_km"],
+            "sf_best_score":     sf_best_score,
+            "sf_total_distance_km": sf_total_dist,
+            "sf_total_runs":     len(sf_runs),
+        })
+    return result
 
 
 @app.get("/locations")
@@ -659,14 +810,13 @@ print(f"[DEBUG] game path exists: {os.path.exists('games/FishingGame/index.html'
 
 if os.path.exists("games/FishingGame/index.html"):
     app.mount("/FishingGame", StaticFiles(directory="games/FishingGame", html=True), name="fishing")
-if os.path.exists("games/FishingGame/index.html"):
-    app.mount("/FishingGame", StaticFiles(directory="games/FishingGame", html=True), name="fishing")
 
 app.mount("/style", StaticFiles(directory="pages/styles"), name="style")
+app.mount("/scripts", StaticFiles(directory="pages/scripts"), name="scripts")
 app.mount("/languages", StaticFiles(directory="pages/languages"), name="languages")
 
-if os.path.exists("../space-game/index.html"):
-    app.mount("/SpaceFunk", StaticFiles(directory="../space-game", html=True), name="space")
+if os.path.exists("games/SpaceFunk/index.html"):
+    app.mount("/SpaceFunk", StaticFiles(directory="games/SpaceFunk", html=True), name="space")
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)

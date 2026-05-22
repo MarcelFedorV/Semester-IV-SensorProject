@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Welcome</title>
-    <link rel="stylesheet" href="/style/common.css">
+    <link rel="stylesheet" href="/style/common.css?v=20260518">
     <script src="/languages/scripts.js"></script>
     <script src="/languages/translations.js"></script>
 </head>
@@ -22,18 +22,25 @@
                     <div class="logo">
                         <div class="logo-icon"></div>
                         <div>
-                            <div class="logo-text"><p class="languageclass" id="logo-text">SensorProject</p></div>
-                            <div class="logo-sub"><p class="languageclass" id="logo-sub">Semester IV · Group 11</p></div>
+                            <div class="logo-text">
+                                <p class="languageclass" id="logo-text">SensorProject</p>
+                            </div>
+                            <div class="logo-sub">
+                                <p class="languageclass" id="logo-sub">Semester IV · Group 11</p>
+                            </div>
                         </div>
                     </div>
                 </a>
             </div>
         </div>
-        <div class="card-eyebrow"><a href="/metrics" style="text-decoration: none; color: inherit;"><p class="languageclass" id="welcome-nav-metrics">Metrics</p></a></div>
-        <div class="card-eyebrow"><p class="languageclass" id="welcome-nav-fishing-game">Fishing Game</p></div>
-        <div class="card-eyebrow"><p class="languageclass" id="welcome-nav-space-funk">Space Funk</p></div>
+        <div class="card-eyebrow"><a href="/metrics" style="text-decoration: none; color: inherit;">
+                <p class="languageclass" id="welcome-nav-metrics">Metrics</p>
+            </a></div>
+        <div class="card-eyebrow"><a href="/games" style="text-decoration: none; color: inherit;">Games</a></div>
+        </div>
         <div class="header-right">
-            <select id="langSwitcher" name="language" style="margin-right:16px;"  onchange="setLanguage(this); saveLanguage();">
+            <select id="langSwitcher" name="language" style="margin-right:16px;"
+                onchange="setLanguage(this); saveLanguage();">
                 <option value="en">EN</option>
                 <option value="dk">DK</option>
             </select>
@@ -41,11 +48,16 @@
             <p class="languageclass" id="welcome-status-online">system online</p>
         </div>
         <div style="margin-left: auto; display: flex; align-items: center; gap: 16px;">
-            <span id="username-display" style="font-family: var(--mono); font-size: 11px; color: var(--text-dim); display: none;"></span>
-            <a href="/account" style="font-family: var(--mono); font-size: 11px; color: var(--accent); text-decoration: none; cursor: pointer; display: none;" id="account-btn">
+            <span id="username-display"
+                style="font-family: var(--mono); font-size: 11px; color: var(--text-dim); display: none;"></span>
+            <a href="/account"
+                style="font-family: var(--mono); font-size: 11px; color: var(--accent); text-decoration: none; cursor: pointer; display: none;"
+                id="account-btn">
                 <p class="languageclass" id="welcome-account-link">[ACCOUNT]</p>
             </a>
-            <a href="#" onclick="handleLogout(); return false;" style="font-family: var(--mono); font-size: 11px; color: var(--accent); text-decoration: none; cursor: pointer; display: none;" id="logout-btn">
+            <a href="#" onclick="handleLogout(); return false;"
+                style="font-family: var(--mono); font-size: 11px; color: var(--accent); text-decoration: none; cursor: pointer; display: none;"
+                id="logout-btn">
                 <p class="languageclass" id="welcome-logout-link">[LOGOUT]</p>
             </a>
         </div>
@@ -55,34 +67,53 @@
         <div class="card" id="login-card">
 
             <div class="card-header">
-                <div class="card-eyebrow"><p class="languageclass" id="welcome-card-eyebrow">Welcome</p></div>
-                <div class="card-title"><p class="languageclass" id="welcome-card-title">Patient Portal</p></div>
-                <div class="card-sub"><p class="languageclass" id="welcome-card-sub">Sign in to your account</p></div>
+                <div class="card-eyebrow">
+                    <p class="languageclass" id="welcome-card-eyebrow">Welcome</p>
+                </div>
+                <div class="card-title">
+                    <p class="languageclass" id="welcome-card-title">Patient Portal</p>
+                </div>
+                <div class="card-sub">
+                    <p class="languageclass" id="welcome-card-sub">Sign in to your account</p>
+                </div>
             </div>
 
             <!-- Tab switcher -->
             <div class="tabs">
-                <button class="tab active" onclick="switchTab('login')"><p class="languageclass" id="welcome-tab-login">Login</p></button>
+                <button class="tab active" onclick="switchTab('login')">
+                    <p class="languageclass" id="welcome-tab-login">Login</p>
+                </button>
             </div>
 
             <!-- Login panel -->
             <div class="tab-panel active" id="panel-login">
                 <div class="input-group">
-                    <label class="input-label"><p class="languageclass" id="welcome-login-username-label">Username</p></label>
+                    <label class="input-label">
+                        <p class="languageclass" id="welcome-login-username-label">Username</p>
+                    </label>
                     <input type="text" placeholder="e.g. john" id="login-id">
                 </div>
                 <div class="input-group">
-                    <label class="input-label"><p class="languageclass" id="welcome-login-password-label">Password</p></label>
+                    <label class="input-label">
+                        <p class="languageclass" id="welcome-login-password-label">Password</p>
+                    </label>
                     <input type="password" placeholder="••••••••" id="login-pw">
                 </div>
-                <div id="login-error" style="color: #ff6b6b; font-size: 12px; margin-bottom: 10px; display: none;"></div>
-                <button class="btn btn-primary" onclick="handleLogin()"><p class="languageclass" id="shared-sign-in-button">▶ Sign In</p></button>
+                <div id="login-error" style="color: #ff6b6b; font-size: 12px; margin-bottom: 10px; display: none;">
+                </div>
+                <button class="btn btn-primary" onclick="handleLogin()">
+                    <p class="languageclass" id="shared-sign-in-button">▶ Sign In</p>
+                </button>
             </div>
 
             <div class="divider"></div>
 
-            <div class="section-label"><p class="languageclass" id="welcome-staff-access">Staff Access</p></div>
-            <a href="/admin/login" class="btn btn-secondary" style="margin-top: 10px;"><p class="languageclass" id="welcome-admin-portal">Admin Portal</p></a>
+            <div class="section-label">
+                <p class="languageclass" id="welcome-staff-access">Staff Access</p>
+            </div>
+            <a href="/admin/login" class="btn btn-secondary" style="margin-top: 10px;">
+                <p class="languageclass" id="welcome-admin-portal">Admin Portal</p>
+            </a>
 
         </div>
 
@@ -90,15 +121,28 @@
         <div class="card" id="greeting-card" style="display: none; margin-top: 20px;">
 
             <div class="card-header">
-                <div class="card-eyebrow"><p class="languageclass" id="welcome-greeting-eyebrow">Welcome back</p></div>
-                <div class="card-title" id="greeting-title"><p class="languageclass" id="welcome-greeting-title">Hello, User!</p></div>
-                <div class="card-sub"><p class="languageclass" id="welcome-greeting-sub">You're now logged in to your account.</p></div>
+                <div class="card-eyebrow">
+                    <p class="languageclass" id="welcome-greeting-eyebrow">Welcome back</p>
+                </div>
+                <div class="card-title" id="greeting-title">
+                    <p class="languageclass" id="welcome-greeting-title">Hello, User!</p>
+                </div>
+                <div class="card-sub">
+                    <p class="languageclass" id="welcome-greeting-sub">You're now logged in to your account.</p>
+                </div>
             </div>
 
             <div class="divider"></div>
 
-            <a href="/account" class="btn btn-primary"><p class="languageclass" id="welcome-view-account">View Account</p></a>
-            <a href="/metrics" class="btn btn-secondary" style="margin-left: 10px;"><p class="languageclass" id="welcome-view-metrics">View Metrics</p></a>
+            <a href="/account" class="btn btn-primary">
+                <p class="languageclass" id="welcome-view-account">View Account</p>
+            </a>
+            <a href="/metrics" class="btn btn-secondary" style="margin-left: 10px;">
+                <p class="languageclass" id="welcome-view-metrics">View Metrics</p>
+            </a>
+            <a href="/games" class="btn btn-secondary" style="margin-left: 10px;">
+                <p class="languageclass" id="welcome-view-games">View Games</p>
+            </a>
 
         </div>
     </div>
@@ -108,14 +152,19 @@
         <div class="card">
 
             <div class="card-header">
-                <div class="card-title"><p class="languageclass" id="welcome-beta-title">BETA VERSION, THINGS WILL LOOK DIFFERENTLY</p></div>
+                <div class="card-title">
+                    <p class="languageclass" id="welcome-beta-title">BETA VERSION, THINGS WILL LOOK DIFFERENTLY</p>
+                </div>
             </div>
 
         </div>
     </div>
 
     <footer>
-        <p class="languageclass" id="welcome-footer-prefix">SEMESTER-IV-SENSORPROJECT · Meet the team of</p> <a href="/developers"><p class="languageclass" id="welcome-footer-link">Group 11</p></a>
+        <p class="languageclass" id="welcome-footer-prefix">SEMESTER-IV-SENSORPROJECT · Meet the team of</p> <a
+            href="/developers">
+            <p class="languageclass" id="welcome-footer-link">Group 11</p>
+        </a>
     </footer>
 
     <script>
@@ -132,7 +181,7 @@
                     // Check if user is admin
                     const adminResponse = await fetch('/api/check-admin');
                     const adminData = await adminResponse.json();
-                    
+
                     if (adminData.is_admin) {
                         // Admin user - redirect to admin dashboard
                         window.location.href = '/admin/dashboard';
@@ -162,7 +211,7 @@
             const username = document.getElementById('login-id').value.trim();
             const password = document.getElementById('login-pw').value.trim();
             const errorDiv = document.getElementById('login-error');
-            
+
             if (!username || !password) {
                 errorDiv.textContent = 'Please enter both username and password.';
                 errorDiv.style.display = 'block';

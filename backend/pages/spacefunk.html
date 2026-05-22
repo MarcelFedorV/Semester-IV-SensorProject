@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Funk</title>
+    <link rel="stylesheet" href="/style/common.css?v=20260518">
+    <script src="/languages/scripts.js"></script>
+    <script src="/languages/translations.js"></script>
+</head>
+
+<body onload="loadLanguage();">
+
+    <div class="grid-bg"></div>
+    <div class="glow"></div>
+
+    <header>
+        <div class="logo">
+            <div>
+                <a href="/" class="logo-link">
+                    <div class="logo">
+                        <div class="logo-icon"></div>
+                        <div>
+                            <div class="logo-text">
+                                <p class="languageclass" id="logo-text">SensorProject</p>
+                            </div>
+                            <div class="logo-sub">
+                                <p class="languageclass" id="logo-sub">Semester IV · Group 11</p>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+        <div class="card-eyebrow"><a href="/metrics" style="text-decoration: none; color: inherit;">Metrics</a></div>
+        <div class="card-eyebrow"><a href="/games" style="text-decoration: none; color: inherit;">Games</a></div>
+        <div class="header-right">
+            <select id="langSwitcher" name="language" style="margin-right:16px;"
+                onchange="setLanguage(this); saveLanguage();">
+                <option value="en">EN</option>
+                <option value="dk">DK</option>
+            </select>
+            <span class="status-dot"></span>
+            system online
+        </div>
+    </header>
+
+    <div class="main">
+        <iframe src="/SpaceFunk/index.html" width="1152" height="648" allowfullscreen></iframe>
+
+    </div>
+
+    <footer>
+        SEMESTER-IV-SENSORPROJECT &nbsp;·&nbsp; Meet the team of <a href="/developers">Group 11</a>
+    </footer>
+</body>
