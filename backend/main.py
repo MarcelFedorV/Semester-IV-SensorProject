@@ -35,7 +35,7 @@ from passlib.context import CryptContext
 from database import SessionLocal, engine, Base, run_migrations
 from models import User
 from fishing_models import FishCatch, FishCollection, AchievementUnlock
-from spacefunk_models import SpaceFunkRun
+from spacefunk_models import SpaceFunkRun, SpaceFunkStats, SF_MAX_RUNS
 import fishing_db
 import bcrypt
 import uvicorn
@@ -730,8 +730,38 @@ async def get_player_stats(user_id: int):
 async def save_spacefunk_score(score: int, distance_m: float, user_id: int):
     db = SessionLocal()
     try:
+        # 1. Insert the new run
         run = SpaceFunkRun(user_id=user_id, score=score, distance_m=distance_m)
         db.add(run)
+        db.flush()  # get the run's id without committing yet
+
+        # 2. Upsert cumulative stats
+        stats = db.query(SpaceFunkStats).filter(SpaceFunkStats.user_id == user_id).first()
+        if stats is None:
+            stats = SpaceFunkStats(
+                user_id          = user_id,
+                total_runs       = 1,
+                total_distance_m = distance_m,
+                best_score       = score,
+            )
+            db.add(stats)
+        else:
+            stats.total_runs       += 1
+            stats.total_distance_m += distance_m
+            if score > stats.best_score:
+                stats.best_score = score
+
+        # 3. Prune oldest runs if over the cap
+        all_runs = (
+            db.query(SpaceFunkRun)
+            .filter(SpaceFunkRun.user_id == user_id)
+            .order_by(SpaceFunkRun.played_at.asc())
+            .all()
+        )
+        if len(all_runs) > SF_MAX_RUNS:
+            for old_run in all_runs[:len(all_runs) - SF_MAX_RUNS]:
+                db.delete(old_run)
+
         db.commit()
         return {"ok": True}
     finally:
@@ -754,10 +784,10 @@ async def my_stats(request: Request, db: Session = Depends(get_db)):
     achievements  = get_unlocked_achievements(db, user.id)
 
     # SpaceFunk stats
-    sf_runs = db.query(SpaceFunkRun).filter(SpaceFunkRun.user_id == user.id).all()
-    sf_best_score   = max((r.score      for r in sf_runs), default=0)
-    sf_total_dist   = round(sum(r.distance_m for r in sf_runs) / 1000, 2)
-    sf_total_runs   = len(sf_runs)
+    sf_stats = db.query(SpaceFunkStats).filter(SpaceFunkStats.user_id == user.id).first()
+    sf_total_runs = sf_stats.total_runs       if sf_stats else 0
+    sf_best_score = sf_stats.best_score       if sf_stats else 0
+    sf_total_dist = round((sf_stats.total_distance_m if sf_stats else 0) / 1000, 2)
 
     return {
         "username": username,
@@ -784,9 +814,10 @@ async def global_stats(db: Session = Depends(get_db)):
         unique_fish   = db.query(FishCollection).filter(FishCollection.user_id == user.id).count()
         stats         = get_stats(db, user.id)
 
-        sf_runs       = db.query(SpaceFunkRun).filter(SpaceFunkRun.user_id == user.id).all()
-        sf_best_score = max((r.score for r in sf_runs), default=0)
-        sf_total_dist = round(sum(r.distance_m for r in sf_runs) / 1000, 2)
+        sf_stats      = db.query(SpaceFunkStats).filter(SpaceFunkStats.user_id == user.id).first()
+        sf_best_score = sf_stats.best_score                                          if sf_stats else 0
+        sf_total_dist = round((sf_stats.total_distance_m if sf_stats else 0) / 1000, 2)
+        sf_total_runs = sf_stats.total_runs                                          if sf_stats else 0
 
         result.append({
             "username":          user.username,
@@ -795,7 +826,7 @@ async def global_stats(db: Session = Depends(get_db)):
             "total_distance_km": stats["total_distance_km"],
             "sf_best_score":     sf_best_score,
             "sf_total_distance_km": sf_total_dist,
-            "sf_total_runs":     len(sf_runs),
+            "sf_total_runs":     sf_total_runs,
         })
     return result
 

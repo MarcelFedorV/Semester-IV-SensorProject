@@ -41,3 +41,24 @@ def run_migrations(engine):
                 print(f"[DB migration] Adding missing column: users.{col_name}")
                 conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_def}"))
         conn.commit()
+
+    # Backfill spacefunk_stats from existing spacefunk_runs for any users who
+    # played before this migration was introduced.
+    tables = inspector.get_table_names()
+    if "spacefunk_runs" in tables and "spacefunk_stats" in tables:
+        with engine.connect() as conn:
+            existing_stats = {
+                row[0] for row in conn.execute(text("SELECT user_id FROM spacefunk_stats"))
+            }
+            users_with_runs = conn.execute(text("SELECT DISTINCT user_id FROM spacefunk_runs")).fetchall()
+            for (uid,) in users_with_runs:
+                if uid not in existing_stats:
+                    print(f"[DB migration] Backfilling spacefunk_stats for user_id={uid}")
+                    conn.execute(text("""
+                        INSERT INTO spacefunk_stats (user_id, total_runs, total_distance_m, best_score)
+                        SELECT user_id, COUNT(*), SUM(distance_m), MAX(score)
+                        FROM spacefunk_runs
+                        WHERE user_id = :uid
+                        GROUP BY user_id
+                    """), {"uid": uid})
+            conn.commit()
