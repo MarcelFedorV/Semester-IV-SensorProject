@@ -14,7 +14,23 @@ services:
       database:
         condition: service_started
     volumes:
-    - db_data:/app/data
+      - db_data:/app/data
+    networks:
+      - app-network
+
+  test:
+    build:
+      context: ./backend
+      dockerfile: backend.Dockerfile
+    environment:
+      - DATABASE_URL=sqlite:////app/data/users.db
+      - BLE_BRIDGE_URL=ws://host.docker.internal:8765
+    depends_on:
+      database:
+        condition: service_started
+    volumes:
+      - db_data:/app/data
+    entrypoint: ["python", "-m", "unittest", "discover", "-s", "integration_tests", "-v"]
     networks:
       - app-network
 

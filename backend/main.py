@@ -70,20 +70,22 @@ async def broadcast(msg: dict):
     for ws in dead:
         connections.remove(ws)
 
-# Wire BLE events → WebSocket
-manager.on_device_updated       = lambda d: asyncio.create_task(broadcast({"type": "device_updated",        "device":  d}))
-manager.on_device_removed       = lambda a: asyncio.create_task(broadcast({"type": "device_removed",        "address": a}))
-manager.on_scan_started         = lambda:   asyncio.create_task(broadcast({"type": "scan_started"}))
-manager.on_scan_stopped         = lambda:   asyncio.create_task(broadcast({"type": "scan_stopped"}))
-manager.on_connected            = lambda a: asyncio.create_task(broadcast({"type": "connected",             "address": a}))
-manager.on_disconnected         = lambda a: asyncio.create_task(broadcast({"type": "disconnected",          "address": a}))
-manager.on_error                = lambda m: asyncio.create_task(broadcast({"type": "error",                 "message": m}))
-manager.on_interrogation_result = lambda r: asyncio.create_task(broadcast({"type": "interrogation_result", "result":  r}))
-manager.on_switch_progress      = lambda m: asyncio.create_task(broadcast({"type": "switch_progress",       "message": m}))
-manager.on_switch_done          = lambda r: asyncio.create_task(broadcast({"type": "switch_done",           "result":  r}))
-manager.on_devices_list         = lambda l: asyncio.create_task(broadcast({"type": "devices_list", "devices": l}))
-manager.on_status               = lambda s: asyncio.create_task(broadcast({"type": "status",       "status":  s}))
-manager.on_sensor_state = lambda active: asyncio.create_task(broadcast({"type": "sensor_state", "active": active}))
+
+def wire_ble_callbacks(target_manager):
+    target_manager.on_device_updated       = lambda d: asyncio.create_task(broadcast({"type": "device_updated",        "device":  d}))
+    target_manager.on_device_removed       = lambda a: asyncio.create_task(broadcast({"type": "device_removed",        "address": a}))
+    target_manager.on_scan_started         = lambda:   asyncio.create_task(broadcast({"type": "scan_started"}))
+    target_manager.on_scan_stopped         = lambda:   asyncio.create_task(broadcast({"type": "scan_stopped"}))
+    target_manager.on_connected            = lambda a: asyncio.create_task(broadcast({"type": "connected",             "address": a}))
+    target_manager.on_disconnected         = lambda a: asyncio.create_task(broadcast({"type": "disconnected",          "address": a}))
+    target_manager.on_error                = lambda m: asyncio.create_task(broadcast({"type": "error",                 "message": m}))
+    target_manager.on_interrogation_result = lambda r: asyncio.create_task(broadcast({"type": "interrogation_result", "result":  r}))
+    target_manager.on_switch_progress      = lambda m: asyncio.create_task(broadcast({"type": "switch_progress",       "message": m}))
+    target_manager.on_switch_done          = lambda r: asyncio.create_task(broadcast({"type": "switch_done",           "result":  r}))
+    target_manager.on_devices_list         = lambda l: asyncio.create_task(broadcast({"type": "devices_list", "devices": l}))
+    target_manager.on_status               = lambda s: asyncio.create_task(broadcast({"type": "status",       "status":  s}))
+    target_manager.on_sensor_state         = lambda active: asyncio.create_task(broadcast({"type": "sensor_state", "active": active}))
+
 
 def _on_metrics(m: dict):
     print(
@@ -93,7 +95,14 @@ def _on_metrics(m: dict):
     )
     asyncio.create_task(broadcast({"type": "metrics", **m}))
 
-manager.on_metrics = _on_metrics
+
+def create_app(ble_client=None):
+    global manager, connections
+    manager = ble_client if ble_client is not None else BLEClient()
+    connections = []
+    wire_ble_callbacks(manager)
+    manager.on_metrics = _on_metrics
+    return app
 
 
 @asynccontextmanager
@@ -848,6 +857,8 @@ app.mount("/languages", StaticFiles(directory="pages/languages"), name="language
 
 if os.path.exists("games/SpaceFunk/index.html"):
     app.mount("/SpaceFunk", StaticFiles(directory="games/SpaceFunk", html=True), name="space")
+
+create_app()
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)

@@ -7,3 +7,4 @@ passlib[bcrypt]
 itsdangerous
 jinja2
 python-multipart
+httpx
