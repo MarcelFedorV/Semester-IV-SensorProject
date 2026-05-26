@@ -48,6 +48,8 @@ const SAVE_INTERVAL = 10.0  # save every 10 seconds
 var is_touching = false
 var fish_on_timer = 0.0
 const FISH_ON_DURATION = 2.0
+var is_paused = false
+var pause_button: Button
 
 
 func _fetch_user_id():
@@ -88,9 +90,11 @@ func _ready():
 	game_state.achievement_unlocked.connect(_on_achievement_unlocked)
 	http_distance.request_completed.connect(_on_distance_saved)
 	
-	# Load persisted distance
-	game_state.load_distance()
+	# Create pause button
+	_create_pause_button()
 	
+	# Load persisted distance
+	game_state.load_distance()	
 
 	fishing_line.set_point_position(0, Vector2(screen_w * CENTER_X_PCT, screen_h * DOCK_Y_PCT))
 	fishing_line.set_point_position(1, Vector2(screen_w * CENTER_X_PCT, screen_h * DOCK_Y_PCT + 10))
@@ -137,8 +141,6 @@ func _on_achievement_unlocked(achievement: Dictionary):
 	achievement_popup.show_achievement(achievement)
 	
 func _on_collection_pressed():
-	# Save distance before changing scene
-	game_state.save_distance()
 	get_tree().change_scene_to_file("res://scenes/collection.tscn")
 
 func _setup_background():
@@ -151,6 +153,10 @@ func _setup_background():
 	bobber.size = Vector2(40, 40)  # adjust based on how big you want it
 
 func _process(delta):
+	# Pause check - skip all game logic when paused
+	if is_paused:
+		return
+	
 	var is_moving = _get_is_moving()
 	game_state.is_moving = is_moving
 	game_state.update(delta)
@@ -158,10 +164,6 @@ func _process(delta):
 	_update_visuals()
 	_update_status_label()
 	distance_label.text = "%.2f km" % (game_state.played_distance_m / 1000.0)
-	
-	# Update _distance_to_save from game_state for manual movement
-	if not game_state.sensor_active:
-		_distance_to_save = game_state.total_distance_m
 	
 	_save_timer += delta
 	if _save_timer >= SAVE_INTERVAL:
@@ -477,3 +479,64 @@ func _on_next_pressed():
 	current_location_index = min(locations.size() - 1, current_location_index + 1)
 	_update_location_display()
 	
+	
+	
+
+
+
+func _create_pause_button():
+	pause_button = Button.new()
+	pause_button.text = "||"  # Pause symbol
+	
+	var btn_size = Vector2(50, 50)
+	var padding = 10
+	
+	pause_button.size = btn_size
+	pause_button.position = Vector2(screen_w - btn_size.x - padding, padding)
+	
+	_setup_button_style(pause_button)
+	pause_button.add_theme_font_size_override("font_size", 24)
+	pause_button.add_theme_color_override("font_color", Color.WHITE)
+	pause_button.pressed.connect(_on_pause_pressed)
+	
+	$UI.add_child(pause_button)
+
+func _on_pause_pressed():
+	is_paused = !is_paused
+	
+	if is_paused:
+		pause_button.text = ">"  # Play symbol (simple)
+		_show_pause_overlay()
+	else:
+		pause_button.text = "||"  # Pause symbol
+		_hide_pause_overlay()
+
+func _show_pause_overlay():
+	var overlay = ColorRect.new()
+	overlay.name = "PauseOverlay"
+	overlay.color = Color(0, 0, 0, 0.6)
+	overlay.size = Vector2(screen_w, screen_h)
+	overlay.position = Vector2.ZERO
+	overlay.z_index = 100
+	
+	var label = Label.new()
+	label.text = "PAUSED"
+	label.position = Vector2(screen_w / 2 - 150, screen_h / 2 - 50)
+	label.size = Vector2(300, 100)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	
+	var font = load("res://assets/fonts/Nunito-VariableFont_wght.ttf")
+	label.add_theme_font_override("font", font)
+	label.add_theme_font_size_override("font_size", 64)
+	label.add_theme_color_override("font_color", Color.WHITE)
+	label.add_theme_constant_override("outline_size", 5)
+	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+	
+	overlay.add_child(label)
+	add_child(overlay)
+
+func _hide_pause_overlay():
+	var overlay = get_node_or_null("PauseOverlay")
+	if overlay:
+		overlay.queue_free()
