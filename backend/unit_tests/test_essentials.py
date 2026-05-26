@@ -1,7 +1,4 @@
-"""
-Essential Unit Tests for Fishing Game Backend
-Tests the most critical functionality with minimal overhead
-"""
+
 import unittest
 import sys
 import os
@@ -86,12 +83,4 @@ class TestCatchLogic(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    # Run with summary
-    loader = unittest.TestLoader()
-    suite = loader.loadTestsFromModule(sys.modules[__name__])
-    runner = unittest.TextTestRunner(verbosity=2)
-    result = runner.run(suite)
-    
-    print("\n" + "="*50)
-    print(f"✅ Tests Passed: {result.testsRun - len(result.failures) - len(result.errors)}/{result.testsRun}")
-    print("="*50)
+    unittest.main(verbosity=2)

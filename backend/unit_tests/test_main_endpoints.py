@@ -1,7 +1,4 @@
-"""
-Essential Tests for main.py Fishing Endpoints
-Tests the critical API endpoint logic
-"""
+
 import unittest
 from unittest.mock import MagicMock, patch
 import sys
