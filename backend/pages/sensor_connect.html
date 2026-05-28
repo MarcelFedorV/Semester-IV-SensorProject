@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sensor Connect</title>
     <link rel="stylesheet" href="/style/common.css">
+    <script src="/languages/scripts.js"></script>
+    <script src="/languages/translations.js"></script>
 </head>
-<body>
+<body onload="loadLanguage();">
     <div class="grid-bg"></div>
     <div class="glow"></div>
 
@@ -16,65 +18,64 @@
                 <div class="logo">
                     <div class="logo-icon"></div>
                     <div>
-                        <div class="logo-text"><p>SensorProject</p></div>
-                        <div class="logo-sub"><p>Semester IV · Group 11</p></div>
+                        <div class="logo-text"><p class="languageclass" id="logo-text">SensorProject</p></div>
+                        <div class="logo-sub"><p class="languageclass" id="logo-sub">Semester IV · Group 11</p></div>
                     </div>
                 </div>
             </a>
         </div>
-        <div class="card-eyebrow"><a href="/games" style="text-decoration:none;color:inherit;">Games</a></div>
+        <div class="card-eyebrow"><a href="/games" style="text-decoration:none;color:inherit;"><p class="languageclass" id="shared-nav-games">Games</p></a></div>
     </header>
 
     <div class="main">
         <div class="card sensor-card">
 
             <div class="card-header">
-                <div class="card-eyebrow">BLUETOOTH SENSOR</div>
-                <div class="card-title">Connect your CSC device</div>
+                <div class="card-eyebrow"><p class="languageclass" id="sensor-card-eyebrow">BLUETOOTH SENSOR</p></div>
+                <div class="card-title"><p class="languageclass" id="sensor-card-title">Connect your CSC device</p></div>
             </div>
 
             <div class="no-ble" id="noBle">
-                Web Bluetooth is not supported on this browser.
-                Use Chrome on Android for sensor support.
+                <p class="languageclass" id="sensor-no-ble">Web Bluetooth is not supported on this browser. Use Chrome on Android for sensor support.</p>
             </div>
 
             <div class="ble-status-row">
                 <div class="ble-dot disconnected" id="bleDot"></div>
-                <span class="ble-status-text" id="bleStatus">Not connected</span>
+                <p class="ble-status-text languageclass" id="sensor-connect-status">Not connected</p>
             </div>
 
-            <button class="btn btn-primary" id="btnConnect">🔗 Scan &amp; Connect</button>
-            <button class="btn btn-danger"  id="btnDisconnect" disabled>Disconnect</button>
-            <button class="btn" id="btnSwitch" disabled style="display:none;background:#7c3aed;color:#fff;">⇄ Switch Mode</button>
+            <button class="btn btn-primary" id="btnConnect"><p class="languageclass" id="sensor-connect-button">🔗 Scan &amp; Connect</p></button>
+            <button class="btn btn-danger"  id="btnDisconnect" disabled><p class="languageclass" id="sensor-disconnect-button">Disconnect</p></button>
+            <button class="btn" id="btnSwitch" disabled style="display:none;background:#7c3aed;color:#fff;"><p class="languageclass" id="sensor-switch-button">⇄ Switch Mode</p></button>
 
             <div class="metrics-grid">
                 <div class="metric-box">
                     <div class="metric-value" id="metSpeed">0.0</div>
                     <div class="metric-unit">km/h</div>
-                    <div class="metric-label">Speed</div>
+                    <div class="metric-label"><p class="languageclass" id="sensor-speed-label">Speed</p></div>
                 </div>
                 <div class="metric-box">
                     <div class="metric-value" id="metCadence">0</div>
                     <div class="metric-unit">rpm</div>
-                    <div class="metric-label">Cadence</div>
+                    <div class="metric-label"><p class="languageclass" id="sensor-cadence-label">Cadence</p></div>
                 </div>
                 <div class="metric-box" style="grid-column: span 2;">
                     <div class="metric-value" id="metDistance">0.00</div>
                     <div class="metric-unit">km</div>
-                    <div class="metric-label">Distance</div>
+                    <div class="metric-label"><p class="languageclass" id="sensor-distance-label">Distance</p></div>
                 </div>
             </div>
 
             <div class="ws-row">
                 <div class="ws-dot" id="wsDot"></div>
-                <span id="wsStatus">Backend not connected</span>
+                <p id="sensor-connect-backend" class="languageclass">Backend not connected</p>
             </div>
 
         </div>
     </div>
 
     <footer>
-        SEMESTER-IV-SENSORPROJECT &nbsp;·&nbsp; Meet the team of <a href="/developers">Group 11</a>
+        <p class="languageclass" id="shared-footer-prefix">SEMESTER-IV-SENSORPROJECT &nbsp;·&nbsp; Meet the team of</p> <a href="/developers"><p class="languageclass" id="shared-footer-link">Group 11</p></a>
     </footer>
 
     <script src="/scripts/sensor_connect.js" defer></script>

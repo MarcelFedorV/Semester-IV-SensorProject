@@ -121,7 +121,7 @@
             const errorDiv = document.getElementById('login-error');
 
             if (!username || !password) {
-                errorDiv.textContent = 'Please enter both username and password.';
+                errorDiv.textContent = translateText('login-empty-fields');
                 errorDiv.style.display = 'block';
                 return;
             }
@@ -142,12 +142,12 @@
                 if (authData.authenticated) {
                     window.location.href = '/';
                 } else {
-                    errorDiv.textContent = 'Invalid username or password.';
+                    errorDiv.textContent = translateText('login-invalid-credentials');
                     errorDiv.style.display = 'block';
                     document.getElementById('login-pw').value = '';
                 }
             } catch (error) {
-                errorDiv.textContent = 'Login failed. Please try again.';
+                errorDiv.textContent = translateText('login-failed');
                 errorDiv.style.display = 'block';
             }
         }

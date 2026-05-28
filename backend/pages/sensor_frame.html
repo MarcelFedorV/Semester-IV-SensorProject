@@ -75,12 +75,12 @@
         #btnSwitch:hover:not(:disabled)  { background: #6d28d9; }
     </style>
 </head>
-<body>
+<body onload="loadLanguage();">
     <div class="pill">
         <div class="ble-dot disconnected" id="bleDot"></div>
-        <span class="status-text" id="bleStatus">Sensor</span>
-        <button class="btn-pill hidden" id="btnSwitch">⇄ SPD</button>
-        <button class="btn-pill" id="btnConnect">Connect</button>
+        <p class="status-text languageclass" id="sensor-frame-status">Sensor</p>
+        <button class="btn-pill hidden" id="btnSwitch"><p class="languageclass" id="sensor-frame-switch">⇄ SPD</p></button>
+        <button class="btn-pill" id="btnConnect"><p class="languageclass" id="sensor-frame-connect">Connect</p></button>
     </div>
     <script src="/scripts/sensor_frame.js?v=8" defer></script>
 </body>

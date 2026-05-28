@@ -99,7 +99,7 @@ class CSCMetrics {
 
 // ── UI refs ──────────────────────────────────────────────────────────────────
 const bleDot     = document.getElementById('bleDot');
-const bleStatus  = document.getElementById('bleStatus');
+const bleStatus  = document.getElementById('sensor-frame-status');
 const btnConnect = document.getElementById('btnConnect');
 const btnSwitch  = document.getElementById('btnSwitch');
 

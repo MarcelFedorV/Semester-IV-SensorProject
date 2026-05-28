@@ -34,8 +34,8 @@
                 </a>
             </div>
         </div>
-        <div class="card-eyebrow"><a href="/metrics" style="text-decoration: none; color: inherit;">Metrics</a></div>
-        <div class="card-eyebrow"><a href="/games" style="text-decoration: none; color: inherit;">Games</a></div>
+        <div class="card-eyebrow"><a href="/metrics" style="text-decoration: none; color: inherit;"><p class="languageclass" id="shared-nav-metrics">Metrics</p></a></div>
+        <div class="card-eyebrow"><a href="/games" style="text-decoration: none; color: inherit;"><p class="languageclass" id="shared-nav-games">Games</p></a></div>
         <div class="header-right">
             <select id="langSwitcher" name="language" style="margin-right:16px;"
                 onchange="setLanguage(this); saveLanguage();">
@@ -43,7 +43,7 @@
                 <option value="dk">DK</option>
             </select>
             <span class="status-dot"></span>
-            system online
+            <p class="languageclass" id="shared-status-online">system online</p>
         </div>
     </header>
 
@@ -51,35 +51,35 @@
         <div class="card">
             <div class="card-header">
 
-                <div class="card-title">Player Statistics</div>
-                <div class="card-eyebrow">Fishing Game</div>
+                <div class="card-title"><p class="languageclass" id="metrics-card-title">Player Statistics</p></div>
+                <div class="card-eyebrow"><p class="languageclass" id="metrics-card-eyebrow">Fishing Game</p></div>
             </div>
 
             <div class="tabs">
-                <button class="tab active" id="tab-me" onclick="switchTab('me')">My Stats</button>
-                <button class="tab" id="tab-global" onclick="switchTab('global')">Global Stats</button>
+                <button class="tab active" id="tab-me" onclick="switchTab('me')"><p class="languageclass" id="metrics-fishing-my-stats-tab">My Stats</p></button>
+                <button class="tab" id="tab-global" onclick="switchTab('global')"><p class="languageclass" id="metrics-fishing-global-stats-tab">Global Stats</p></button>
             </div>
 
             <div class="tab-panel active" id="panel-me">
                 <table class="stats-table">
                     <tr>
-                        <td>Total Catches</td>
+                        <td><p class="languageclass" id="metrics-fishing-total-catches">Total Catches</p></td>
                         <td id="stat-catches">—</td>
                     </tr>
                     <tr>
-                        <td>Unique Fish</td>
+                        <td><p class="languageclass" id="metrics-fishing-unique-fish">Unique Fish</p></td>
                         <td id="stat-unique">—</td>
                     </tr>
                     <tr>
-                        <td>Distance Cycled</td>
+                        <td><p class="languageclass" id="metrics-fishing-distance-cycled">Distance Cycled</p></td>
                         <td id="stat-distance">—</td>
                     </tr>
                     <tr>
-                        <td>Sessions</td>
+                        <td><p class="languageclass" id="metrics-fishing-sessions">Sessions</p></td>
                         <td id="stat-sessions">—</td>
                     </tr>
                     <tr>
-                        <td>Achievements</td>
+                        <td><p class="languageclass" id="metrics-fishing-achievements">Achievements</p></td>
                         <td id="stat-achievements">—</td>
                     </tr>
                 </table>
@@ -89,10 +89,10 @@
                 <table class="stats-table">
                     <thead>
                         <tr>
-                            <th>Player</th>
-                            <th>Catches</th>
-                            <th>Unique Fish</th>
-                            <th>Distance</th>
+                            <th><p class="languageclass" id="metrics-fishing-player">Player</p></th>
+                            <th><p class="languageclass" id="metrics-fishing-catches">Catches</p></th>
+                            <th><p class="languageclass" id="metrics-fishing-unique-fish-global">Unique Fish</p></th>
+                            <th><p class="languageclass" id="metrics-fishing-distance">Distance</p></th>
                         </tr>
                     </thead>
                     <tbody id="global-tbody"></tbody>
@@ -102,26 +102,26 @@
             <div style="border-top: 1px solid var(--border); margin: 24px 0;"></div>
 
             <div class="card-header">
-                <div class="card-title">Space Funk</div>
+                <div class="card-title"><p class="languageclass" id="metrics-space-funk-title">Space Funk</p></div>
             </div>
 
             <div class="tabs">
-                <button class="tab active" id="sf-tab-me" onclick="switchSFTab('me')">My Stats</button>
-                <button class="tab" id="sf-tab-global" onclick="switchSFTab('global')">Leaderboard</button>
+                <button class="tab active" id="sf-tab-me" onclick="switchSFTab('me')"><p class="languageclass" id="metrics-space-my-stats-tab">My Stats</p></button>
+                <button class="tab" id="sf-tab-global" onclick="switchSFTab('global')"><p class="languageclass" id="metrics-space-leaderboard-tab">Leaderboard</p></button>
             </div>
 
             <div class="tab-panel active" id="sf-panel-me">
                 <table class="stats-table">
                     <tr>
-                        <td>Total Runs</td>
+                        <td><p class="languageclass" id="metrics-space-total-runs">Total Runs</p></td>
                         <td id="sf-stat-runs">—</td>
                     </tr>
                     <tr>
-                        <td>Best Score</td>
+                        <td><p class="languageclass" id="metrics-space-best-score">Best Score</p></td>
                         <td id="sf-stat-score">—</td>
                     </tr>
                     <tr>
-                        <td>Distance Cycled</td>
+                        <td><p class="languageclass" id="metrics-space-distance-cycled">Distance Cycled</p></td>
                         <td id="sf-stat-distance">—</td>
                     </tr>
                 </table>
@@ -131,9 +131,9 @@
                 <table class="stats-table">
                     <thead>
                         <tr>
-                            <th>Player</th>
-                            <th>Best Score</th>
-                            <th>Distance</th>
+                            <th><p class="languageclass" id="metrics-space-player">Player</p></th>
+                            <th><p class="languageclass" id="metrics-space-best-score-global">Best Score</p></th>
+                            <th><p class="languageclass" id="metrics-space-distance">Distance</p></th>
                         </tr>
                     </thead>
                     <tbody id="sf-global-tbody"></tbody>
@@ -143,6 +143,6 @@
     </div>
 
     <footer>
-        SEMESTER-IV-SENSORPROJECT &nbsp;·&nbsp; Meet the team of <a href="/developers">Group 11</a>
+        <p class="languageclass" id="shared-footer-prefix">SEMESTER-IV-SENSORPROJECT &nbsp;·&nbsp; Meet the team of</p> <a href="/developers"><p class="languageclass" id="shared-footer-link">Group 11</p></a>
     </footer>
 </body>

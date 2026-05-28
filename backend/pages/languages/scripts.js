@@ -6,7 +6,10 @@ function setLanguage(selectElement) {
         selectedValue = String(selectElement.value).toLowerCase();
     }
     console.log("Selected:", selectedValue);
-    document.getElementById('langSwitcher').value = selectedValue;
+    const langSwitcher = document.getElementById('langSwitcher');
+    if (langSwitcher) {
+        langSwitcher.value = selectedValue;
+    }
 //   localStorage.setItem('lang', selectedValue);
 
   changeLanguage();
@@ -14,7 +17,8 @@ function setLanguage(selectElement) {
 
 function changeLanguage() {
     // const lang = localStorage.getItem('lang') || 'en';
-    const lang = document.getElementById('langSwitcher').value || 'en';
+    const langSwitcher = document.getElementById('langSwitcher');
+    const lang = (langSwitcher && langSwitcher.value) || document.documentElement.lang || 'en';
     // document.getElementById('langSwitcher').value = lang;
     
     // fetch("/languages/translations.js")
@@ -28,10 +32,24 @@ function changeLanguage() {
     const elements = document.querySelectorAll(".languageclass");
         elements.forEach(el => {
             console.log(el.id);
-            console.log(translations[el.id]["en"]);
-            el.innerHTML = translations[el.id][lang];
+            const entry = translations[el.id];
+            if (!entry) {
+                return;
+            }
+            console.log(entry["en"]);
+            el.innerHTML = entry[lang] || entry.en || el.innerHTML;
         });
 
+}
+
+function translateText(key) {
+    const langSwitcher = document.getElementById('langSwitcher');
+    const lang = (langSwitcher && langSwitcher.value) || document.documentElement.lang || 'en';
+    const entry = translations[key];
+    if (!entry) {
+        return '';
+    }
+    return entry[lang] || entry.en || '';
 }
 
 async function loadLanguage() {
@@ -54,7 +72,8 @@ async function loadLanguage() {
 }
 
 async function saveLanguage() {
-    const language = document.getElementById("langSwitcher").value;
+    const langSwitcher = document.getElementById("langSwitcher");
+    const language = langSwitcher ? langSwitcher.value : document.documentElement.lang || "en";
     console.log("Saving language:", language);
 
     try {

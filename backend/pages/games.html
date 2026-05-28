@@ -102,7 +102,7 @@
         }
     </style>
 </head>
-<body>
+<body onload="loadLanguage();">
     <div class="grid-bg"></div>
     <div class="glow"></div>
 
@@ -118,17 +118,22 @@
                 <div class="logo">
                     <div class="logo-icon"></div>
                     <div>
-                        <div class="logo-text"><p>SensorProject</p></div>
-                        <div class="logo-sub"><p>Semester IV · Group 11</p></div>
+                        <div class="logo-text"><p class="languageclass" id="logo-text">SensorProject</p></div>
+                        <div class="logo-sub"><p class="languageclass" id="logo-sub">Semester IV · Group 11</p></div>
                     </div>
                 </div>
             </a>
         </div>
-        <div class="card-eyebrow"><a href="/metrics" style="text-decoration:none;color:inherit;">Metrics</a></div>
-        <div class="card-eyebrow" id="nav-games" style="cursor:pointer;">Games</div>
+        <div class="card-eyebrow"><a href="/metrics" style="text-decoration:none;color:inherit;"><p class="languageclass" id="shared-nav-metrics">Metrics</p></a></div>
+        <div class="card-eyebrow" id="nav-games" style="cursor:pointer;"><p class="languageclass" id="shared-nav-games">Games</p></div>
         <div class="header-right">
+            <select id="langSwitcher" name="language" style="margin-right:16px;"
+                onchange="setLanguage(this); saveLanguage();">
+                <option value="en">EN</option>
+                <option value="dk">DK</option>
+            </select>
             <span class="status-dot"></span>
-            system online
+            <p class="languageclass" id="shared-status-online">system online</p>
         </div>
     </header>
 
@@ -137,15 +142,15 @@
         <div class="game-picker">
             <div class="game-card" onclick="launchGame('fishing')">
                 <img src="/style/fishing.png" alt="Fishing Game">
-                <div class="game-card-title">Fishing Game</div>
+                <div class="game-card-title"><p class="languageclass" id="games-fishing-game">Fishing Game</p></div>
             </div>
             <div class="game-card" onclick="launchGame('spacefunk')">
                 <img src="/style/space.png" alt="Space Funk">
-                <div class="game-card-title">Space Funk</div>
+                <div class="game-card-title"><p class="languageclass" id="games-space-funk">Space Funk</p></div>
             </div>
             <div class="game-card" style="cursor:default;opacity:0.5;">
                 <img src="/style/more.png" alt="More soon">
-                <div class="game-card-title">More games coming soon</div>
+                <div class="game-card-title"><p class="languageclass" id="games-more-coming">More games coming soon</p></div>
             </div>
         </div>
     </div>
@@ -154,7 +159,7 @@
     <div class="main shell-mode" id="shellArea" style="display:none;">
         <div class="game-shell active">
             <div class="game-topbar">
-                <button class="game-back-btn" onclick="exitGame()">← Back to Games</button>
+                <button class="game-back-btn" onclick="exitGame()"><p class="languageclass" id="shared-back-to-games">← Back to Games</p></button>
                 <span class="game-topbar-title" id="gameTitle"></span>
             </div>
             <iframe class="game-frame" id="gameFrame" src="" allowfullscreen></iframe>
@@ -162,9 +167,11 @@
     </div>
 
     <footer>
-        SEMESTER-IV-SENSORPROJECT &nbsp;·&nbsp; Meet the team of <a href="/developers">Group 11</a>
+        <p class="languageclass" id="shared-footer-prefix">SEMESTER-IV-SENSORPROJECT &nbsp;·&nbsp; Meet the team of</p> <a href="/developers"><p class="languageclass" id="shared-footer-link">Group 11</p></a>
     </footer>
 
+    <script src="/languages/scripts.js"></script>
+    <script src="/languages/translations.js"></script>
     <script>
         const GAMES = {
             fishing:   { title: 'Fishing Game', src: '/FishingGame/index.html' },

@@ -154,7 +154,7 @@
         </div>
         <div class="header-right">
             <span class="status-dot"></span>
-            ADMIN MODE
+            <p class="languageclass" id="admin-mode">ADMIN MODE</p>
         </div>
         <div style="margin-left: auto; display: flex; align-items: center; gap: 16px;">
             <span id="username-display"
@@ -170,41 +170,41 @@
         <div class="card">
 
             <div class="card-header">
-                <div class="card-eyebrow">Administration</div>
-                <div class="card-title">Admin Dashboard</div>
-                <div class="card-sub">Manage users and system accounts</div>
+                <div class="card-eyebrow"><p class="languageclass" id="admin-card-eyebrow-alt">Administration</p></div>
+                <div class="card-title"><p class="languageclass" id="admin-card-title-alt">Admin Dashboard</p></div>
+                <div class="card-sub"><p class="languageclass" id="admin-card-sub-alt">Manage users and system accounts</p></div>
             </div>
 
             <!-- Tab switcher -->
             <div class="tabs-admin">
-                <button class="tab-admin active" onclick="switchAdminTab('users')">Users</button>
-                <button class="tab-admin" onclick="switchAdminTab('create')">Create User</button>
+                <button class="tab-admin active" onclick="switchAdminTab('users')"><p class="languageclass" id="admin-users-tab">Users</p></button>
+                <button class="tab-admin" onclick="switchAdminTab('create')"><p class="languageclass" id="admin-create-tab">Create User</p></button>
             </div>
 
             <!-- Users List Panel -->
             <div class="tab-panel-admin active" id="panel-users">
-                <div class="section-label">All Users</div>
+                <div class="section-label"><p class="languageclass" id="admin-all-users">All Users</p></div>
                 <div id="users-list" class="user-list">
-                    <p style="color: var(--text-dim); font-family: var(--mono); font-size: 11px;">Loading users...</p>
+                    <p class="languageclass" id="admin-loading-users" style="color: var(--text-dim); font-family: var(--mono); font-size: 11px;">Loading users...</p>
                 </div>
             </div>
 
             <!-- Create User Panel -->
             <div class="tab-panel-admin" id="panel-create">
                 <div class="input-group">
-                    <label class="input-label">Username</label>
+                    <label class="input-label"><p class="languageclass" id="admin-new-username-label">Username</p></label>
                     <input type="text" id="new-username" placeholder="New username">
                 </div>
                 <div class="input-group">
-                    <label class="input-label">Password</label>
+                    <label class="input-label"><p class="languageclass" id="admin-new-password-label">Password</p></label>
                     <input type="password" id="new-password" placeholder="New password">
                 </div>
                 <div class="input-group">
-                    <label class="input-label">Email (optional)</label>
+                    <label class="input-label"><p class="languageclass" id="admin-new-email-label">Email (optional)</p></label>
                     <input type="email" id="new-email" placeholder="user@example.com">
                 </div>
                 <div class="input-group">
-                    <label class="input-label">Role</label>
+                    <label class="input-label"><p class="languageclass" id="admin-new-role-label">Role</p></label>
                     <select id="new-role"
                         style="width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 10px 14px; font-family: var(--mono); font-size: 12px; color: var(--text); outline: none; transition: border-color .15s;">
                         <option value="user">User</option>
@@ -215,12 +215,12 @@
                 </div>
                 <div id="create-success" style="color: #00ff9d; font-size: 12px; margin-bottom: 10px; display: none;">
                 </div>
-                <button class="btn btn-primary" onclick="createNewUser()">▶ Create User</button>
+                <button class="btn btn-primary" onclick="createNewUser()"><p class="languageclass" id="admin-create-button">▶ Create User</p></button>
             </div>
 
             <div class="divider"></div>
 
-            <a href="/ble" class="btn btn-secondary">BLE Scanner</a>
+            <a href="/ble" class="btn btn-secondary"><p class="languageclass" id="admin-ble-scanner">BLE Scanner</p></a>
 
             <div class="divider"></div>
 
@@ -230,7 +230,7 @@
     </div>
 
     <footer>
-        SEMESTER-IV-SENSORPROJECT &nbsp;·&nbsp; Meet the team of <a href="/developers">Group 11</a>
+        <p class="languageclass" id="shared-footer-prefix">SEMESTER-IV-SENSORPROJECT &nbsp;·&nbsp; Meet the team of</p> <a href="/developers"><p class="languageclass" id="shared-footer-link">Group 11</p></a>
     </footer>
 
     <script>
@@ -264,7 +264,7 @@
             try {
                 const response = await fetch('/api/admin/users');
                 if (!response.ok) {
-                    document.getElementById('users-list').innerHTML = '<p style="color: #ff6b6b; font-family: var(--mono); font-size: 11px;">Failed to load users</p>';
+                    document.getElementById('users-list').innerHTML = `<p class="languageclass" id="admin-failed-load-users" style="color: #ff6b6b; font-family: var(--mono); font-size: 11px;">${translateText('admin-failed-load-users')}</p>`;
                     return;
                 }
 
@@ -272,7 +272,7 @@
                 const usersList = document.getElementById('users-list');
 
                 if (data.users.length === 0) {
-                    usersList.innerHTML = '<p style="color: var(--text-dim); font-family: var(--mono); font-size: 11px;">No users found</p>';
+                    usersList.innerHTML = `<p class="languageclass" id="admin-no-users-found" style="color: var(--text-dim); font-family: var(--mono); font-size: 11px;">${translateText('admin-no-users-found')}</p>`;
                     return;
                 }
 
@@ -290,7 +290,7 @@
                 `).join('');
             } catch (error) {
                 console.error('Error loading users:', error);
-                document.getElementById('users-list').innerHTML = '<p style="color: #ff6b6b; font-family: var(--mono); font-size: 11px;">Error loading users</p>';
+                document.getElementById('users-list').innerHTML = `<p class="languageclass" id="admin-error-loading-users" style="color: #ff6b6b; font-family: var(--mono); font-size: 11px;">${translateText('admin-error-loading-users')}</p>`;
             }
         }
 
@@ -306,13 +306,13 @@
             successDiv.style.display = 'none';
 
             if (!username || !password) {
-                errorDiv.textContent = 'Username and password are required.';
+                errorDiv.textContent = translateText('admin-username-password-required');
                 errorDiv.style.display = 'block';
                 return;
             }
 
             if (password.length < 6) {
-                errorDiv.textContent = 'Password must be at least 6 characters.';
+                errorDiv.textContent = translateText('admin-password-too-short');
                 errorDiv.style.display = 'block';
                 return;
             }
@@ -332,7 +332,7 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    successDiv.textContent = 'User created successfully!';
+                    successDiv.textContent = translateText('admin-user-created');
                     successDiv.style.display = 'block';
                     document.getElementById('new-username').value = '';
                     document.getElementById('new-password').value = '';
@@ -343,18 +343,18 @@
                         switchAdminTab('users');
                     }, 1500);
                 } else {
-                    errorDiv.textContent = data.detail || 'Failed to create user.';
+                    errorDiv.textContent = data.detail || translateText('admin-failed-create-user');
                     errorDiv.style.display = 'block';
                 }
             } catch (error) {
-                errorDiv.textContent = 'Error creating user. Please try again.';
+                errorDiv.textContent = translateText('admin-error-creating-user');
                 errorDiv.style.display = 'block';
                 console.error(error);
             }
         }
 
         async function deleteUser(userId) {
-            if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+            if (!confirm(translateText('admin-confirm-delete-user'))) {
                 return;
             }
 
@@ -366,10 +366,10 @@
                 if (response.ok) {
                     loadUsers();
                 } else {
-                    alert('Failed to delete user');
+                    alert(translateText('admin-failed-delete-user'));
                 }
             } catch (error) {
-                alert('Error deleting user');
+                alert(translateText('admin-error-deleting-user'));
                 console.error(error);
             }
         }
@@ -381,7 +381,7 @@
         }
 
         function handleLogout() {
-            if (confirm('Are you sure you want to log out?')) {
+            if (confirm(translateText('admin-confirm-logout'))) {
                 window.location.href = '/admin/logout';
             }
         }

@@ -97,12 +97,12 @@ class CSCMetrics {
 
 // ── UI refs ──────────────────────────────────────────────────────────────────
 const bleDot      = document.getElementById('bleDot');
-const bleStatus   = document.getElementById('bleStatus');
+const bleStatus   = document.getElementById('sensor-connect-status');
 const btnConnect  = document.getElementById('btnConnect');
 const btnDisc     = document.getElementById('btnDisconnect');
 const btnSwitch   = document.getElementById('btnSwitch');
 const wsDot       = document.getElementById('wsDot');
-const wsStatusEl  = document.getElementById('wsStatus');
+const wsStatusEl  = document.getElementById('sensor-connect-backend');
 const metSpeed    = document.getElementById('metSpeed');
 const metCadence  = document.getElementById('metCadence');
 const metDistance = document.getElementById('metDistance');
