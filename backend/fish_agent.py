@@ -1,55 +1,52 @@
-import random
-
 class FishAgent:
-    """
-    A reactive agent representing a fish in the water.
     
-    Agent loop: perceive environment → decide action → act
-    
-    Percepts:  depth, location_id, habitat of fish
-    Actions:   ignore, nibble, bite
-    """
+
+    HABITAT_RANGES = {
+        "surface": (0.0,  0.35),
+        "mid":     (0.35, 0.7),
+        "deep":    (0.7,  1.0),
+    }
 
     def __init__(self, fish: dict):
         self.fish    = fish
         self.rarity  = fish.get("rarity", "Common")
-        self.habitat = fish.get("depth", "surface")
+        self.habitat = fish.get("depth", "mid")
 
     def perceive(self, depth: float, location_id: int) -> dict:
-        """
-        Gather percepts from the environment.
-        Returns a percept dictionary the agent uses to decide.
-        """
+        
         location_match = (self.fish.get("location_id") == location_id)
 
+        low, high = self.HABITAT_RANGES.get(self.habitat, (0.0, 1.0))
+        habitat_match = low <= depth < high
+
         return {
-            "depth":         depth,
+            "depth":          depth,
             "location_match": location_match,
+            "habitat_match":  habitat_match,
         }
 
     def decide(self, percepts: dict) -> str:
-        """
-        Rules-based decision from percepts.
-        
-        Actions:
-          ignore  — fish not at this location
-          bite    — fish goes for the bait
-        """
-        # Only check location - all fish can be caught at any depth
         if not percepts["location_match"]:
             return "ignore"
-        
-        # If location matches, fish will bite
+
+        if not percepts["habitat_match"]:
+            return "nibble" 
+
         return "bite"
 
     def act(self, decision: str) -> dict:
-        """
-        Execute the decision and return result.
-        """
+        import random
+        if decision == "bite":
+            caught = True
+        elif decision == "nibble":
+            caught = random.random() < 0.75
+        else:
+            caught = False
+
         return {
-            "action":  decision,
-            "caught":  decision == "bite",
-            "fish":    self.fish if decision == "bite" else None,
+            "action": decision,
+            "caught": caught,
+            "fish":   self.fish if caught else None,
         }
 
     def run(self, depth: float, location_id: int) -> dict:
