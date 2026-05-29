@@ -33,10 +33,12 @@
                 </a>
             </div>
         </div>
-        <div class="card-eyebrow"><a href="/metrics" style="text-decoration: none; color: inherit;"><p class="languageclass" id="shared-nav-metrics">Metrics</p></a></div>
-        <!-- <div class="card-eyebrow">Fishing Game</div>
-        <div class="card-eyebrow">Space Funk</div> -->
-        <div class="card-eyebrow"><a href="/games" style="text-decoration: none; color: inherit;"><p class="languageclass" id="shared-nav-games">Games</p></a></div>
+        <div class="card-eyebrow"><a href="/metrics" style="text-decoration: none; color: inherit;">
+                <p class="languageclass" id="shared-nav-metrics">Metrics</p>
+            </a></div>
+        <div class="card-eyebrow"><a href="/games" style="text-decoration: none; color: inherit;">
+                <p class="languageclass" id="shared-nav-games">Games</p>
+            </a></div>
         <div class="header-right">
             <select id="langSwitcher" name="language" style="margin-right:16px;"
                 onchange="setLanguage(this); saveLanguage();">
@@ -61,23 +63,35 @@
         <div class="card">
 
             <div class="card-header">
-                <div class="card-eyebrow"><p class="languageclass" id="account-card-eyebrow">Account Settings</p></div>
-                <div class="card-title"><p class="languageclass" id="account-card-title">My Profile</p></div>
-                <div class="card-sub"><p class="languageclass" id="account-card-sub">View and update your account information</p></div>
+                <div class="card-eyebrow">
+                    <p class="languageclass" id="account-card-eyebrow">Account Settings</p>
+                </div>
+                <div class="card-title">
+                    <p class="languageclass" id="account-card-title">My Profile</p>
+                </div>
+                <div class="card-sub">
+                    <p class="languageclass" id="account-card-sub">View and update your account information</p>
+                </div>
             </div>
 
             <!-- Account Info Section -->
             <div style="margin-bottom: 24px;">
-                <div class="section-label"><p class="languageclass" id="account-info-section">Account Information</p></div>
+                <div class="section-label">
+                    <p class="languageclass" id="account-info-section">Account Information</p>
+                </div>
 
                 <div class="input-group">
-                    <label class="input-label"><p class="languageclass" id="account-username-label">Username</p></label>
+                    <label class="input-label">
+                        <p class="languageclass" id="account-username-label">Username</p>
+                    </label>
                     <input type="text" id="username" disabled
                         style="background: var(--bg); color: var(--text-dim); cursor: not-allowed;">
                 </div>
 
                 <div class="input-group">
-                    <label class="input-label"><p class="languageclass" id="account-email-label">Email</p></label>
+                    <label class="input-label">
+                        <p class="languageclass" id="account-email-label">Email</p>
+                    </label>
                     <input type="email" id="email" placeholder="your.email@example.com">
                 </div>
             </div>
@@ -86,10 +100,14 @@
 
             <!-- Profile Details Section -->
             <div>
-                <div class="section-label"><p class="languageclass" id="account-profile-section">Profile Details</p></div>
+                <div class="section-label">
+                    <p class="languageclass" id="account-profile-section">Profile Details</p>
+                </div>
 
                 <div class="input-group">
-                    <label class="input-label"><p class="languageclass" id="account-bio-label">Bio</p></label>
+                    <label class="input-label">
+                        <p class="languageclass" id="account-bio-label">Bio</p>
+                    </label>
                     <textarea id="bio" placeholder="Tell us about yourself..."
                         style="width: 100%; min-height: 80px; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 10px 14px; font-family: var(--sans); font-size: 12px; color: var(--text); outline: none; resize: vertical; box-sizing: border-box; transition: border-color .15s, box-shadow .15s;"
                         onfocus="this.style.borderColor = 'var(--accent)'; this.style.boxShadow = '0 0 0 3px rgba(0, 229, 255, .08)';"
@@ -97,12 +115,16 @@
                 </div>
 
                 <div class="input-group">
-                    <label class="input-label"><p class="languageclass" id="account-age-label">Age</p></label>
+                    <label class="input-label">
+                        <p class="languageclass" id="account-age-label">Age</p>
+                    </label>
                     <input type="number" id="age" placeholder="Your age" min="1" max="150">
                 </div>
 
                 <div class="input-group">
-                    <label class="input-label"><p class="languageclass" id="account-favorite-game-label">Favorite Game</p></label>
+                    <label class="input-label">
+                        <p class="languageclass" id="account-favorite-game-label">Favorite Game</p>
+                    </label>
                     <select id="favorite-game"
                         style="width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 10px 14px; font-family: var(--sans); font-size: 12px; color: var(--text); outline: none; box-sizing: border-box; transition: border-color .15s, box-shadow .15s;"
                         onfocus="this.style.borderColor = 'var(--accent)'; this.style.boxShadow = '0 0 0 3px rgba(0, 229, 255, .08)';"
@@ -120,7 +142,9 @@
                     style="color: #ff6b6b; font-size: 12px; margin-bottom: 10px; display: none; font-family: var(--mono);">
                 </div>
 
-                <button class="btn btn-primary" onclick="saveProfile()"><p class="languageclass" id="account-save-button">▶ Save Changes</p></button>
+                <button class="btn btn-primary" onclick="saveProfile()">
+                    <p class="languageclass" id="account-save-button">▶ Save Changes</p>
+                </button>
             </div>
 
             <div class="divider"></div>
@@ -131,7 +155,10 @@
     </div>
 
     <footer>
-        <p class="languageclass" id="shared-footer-prefix">SEMESTER-IV-SENSORPROJECT &nbsp;·&nbsp; Meet the team of</p> <a href="/developers"><p class="languageclass" id="shared-footer-link">Group 11</p></a>
+        <p class="languageclass" id="shared-footer-prefix">SEMESTER-IV-SENSORPROJECT &nbsp;·&nbsp; Meet the team of</p>
+        <a href="/developers">
+            <p class="languageclass" id="shared-footer-link">Group 11</p>
+        </a>
     </footer>
 
     <script>
