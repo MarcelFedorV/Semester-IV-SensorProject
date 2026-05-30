@@ -1,9 +1,9 @@
 # fishing_db.py
 from sqlalchemy.orm import Session
 from fishing_models import FishCatch, FishCollection, AchievementUnlock, PlayerStats
-from fish_data import FISH, MYSTERY_FISH_BY_LOCATION
+from fish_data import FISH
 from datetime import datetime
-from achievements import ACHIEVEMENTS_BY_ID, DISTANCE_ACHIEVEMENTS
+from achievements import DISTANCE_ACHIEVEMENTS
 
 
 def get_caught_ids(db: Session, user_id: int) -> set:
@@ -13,8 +13,6 @@ def get_caught_ids(db: Session, user_id: int) -> set:
     return {row[0] for row in rows}
 
 def save_catch(db: Session, user_id: int, fish_id: int, location_id: int, depth: float) -> bool:
-    """Save catch, return True if it's a new fish."""
-    # Add to catches log
     catch = FishCatch(
         user_id=user_id,
         fish_id=fish_id,
@@ -24,7 +22,7 @@ def save_catch(db: Session, user_id: int, fish_id: int, location_id: int, depth:
     )
     db.add(catch)
 
-    # Add to collection if new
+    
     existing = db.query(FishCollection).filter(
         FishCollection.user_id == user_id,
         FishCollection.fish_id == fish_id
@@ -43,7 +41,6 @@ def save_catch(db: Session, user_id: int, fish_id: int, location_id: int, depth:
     return is_new
 
 def get_collection(db: Session, user_id: int):
-    """Returns all fish with caught status for this user."""
     caught = get_caught_ids(db, user_id)
     return [
         {**f, "caught": f["id"] in caught}
@@ -66,7 +63,6 @@ def get_or_create_stats(db, user_id: int) -> PlayerStats:
     return stats
 
 def add_distance(db, user_id: int, distance_m: float) -> list[str]:
-    """Add distance and return list of newly unlocked achievement ids."""
     stats = get_or_create_stats(db, user_id)
     stats.total_distance_m += distance_m
     stats.updated_at = datetime.utcnow()
@@ -118,15 +114,15 @@ def check_fishing_achievements(db, user_id: int, fish: dict, caught_ids: set) ->
         if unlock_achievement(db, user_id, ach_id):
             newly_unlocked.append(ach_id)
 
-    # First catch
+    
     if len(caught_ids) == 1:
         try_unlock("first_catch")
 
-    # Legendary catch
+    
     if fish.get("rarity") == "Legendary":
         try_unlock("lucky_day")
 
-    # Mystery/Location Legend
+   
     if fish.get("rarity") == "Location Legend":
         try_unlock("mystery_first")
 
