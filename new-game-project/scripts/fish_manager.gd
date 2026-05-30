@@ -20,7 +20,7 @@ func _make_fish() -> Node2D:
 	var fish = Node2D.new()
 	var color = Color(0.02, 0.05, 0.15, 0.5)
 
-	# ── Body ──
+	# Body 
 	var body = Polygon2D.new()
 	body.polygon = PackedVector2Array([
 		Vector2(-30, 0),   # tail left
@@ -36,7 +36,7 @@ func _make_fish() -> Node2D:
 	body.color = color
 	fish.add_child(body)
 
-	# ── Tail ──
+	# Tail 
 	var tail = Polygon2D.new()
 	tail.polygon = PackedVector2Array([
 		Vector2(-30,  0),
@@ -47,7 +47,7 @@ func _make_fish() -> Node2D:
 	tail.color = color
 	fish.add_child(tail)
 
-	# ── Eye ──
+	# Eye 
 	var eye = Polygon2D.new()
 	var eye_points = PackedVector2Array()
 	for j in range(8):
@@ -66,7 +66,6 @@ func update(delta: float, screen_w: float):
 		var dir   = fish.get_meta("dir")
 		fish.position.x += speed * dir * delta
 
-		# Flip fish to face direction of travel
 		fish.scale.x = abs(fish.scale.x) * dir
 
 		if fish.position.x > screen_w + 100:

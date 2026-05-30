@@ -18,7 +18,6 @@ func _ready():
 	position.y = _hidden_y
 	visible    = true
 	
-	# Apply Nunito font to labels
 	var nunito_font = load("res://assets/fonts/Nunito-VariableFont_wght.ttf")
 	icon_label.add_theme_font_override("font", nunito_font)
 	title_label.add_theme_font_override("font", nunito_font)

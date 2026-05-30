@@ -4,8 +4,8 @@ enum State { FISHING, REELING, REVEALING }
 
 const REEL_SPEED              = 0.3
 const REEL_DECAY              = 0.15
-const DEPTH_SPEED_MAX_KMH     = 20.0  # speed at which bobber is at full depth (NOT USED ANYMORE)
-const DEPTH_INCREASE_RATE     = 0.3   # Depth increases 30% per second while moving
+const DEPTH_SPEED_MAX_KMH     = 20.0  
+const DEPTH_INCREASE_RATE     = 0.3   
 const MANUAL_MOVE_SPEED_MPS   = 3.0   # fallback movement speed for clicks/touches
 var _catch_distance_m: float  = 100.0  # meters between catches (randomised)
 var _last_catch_distance_m: float = 0.0
