@@ -1,9 +1,5 @@
-"""
-main.py — FastAPI server bridging BLE manager to browser.
+# FastAPI backend — handles authentication, WebSocket sensor broadcasting, fishing and space game endpoints, and database access.
 
-pip install fastapi uvicorn bleak
-python main.py  →  http://localhost:8000
-"""
 import os
 import asyncio
 import json
@@ -11,7 +7,6 @@ import sys
 import random
 import mimetypes
 
-# Godot web export MIME types
 mimetypes.add_type("application/wasm",        ".wasm")
 mimetypes.add_type("application/octet-stream", ".pck")
 from contextlib import asynccontextmanager
@@ -152,7 +147,6 @@ app.add_middleware(SessionMiddleware, secret_key="your-secret-key-change-this")
 templates = Jinja2Templates(directory="pages")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# --- Auth helpers ---
 def get_current_user(request: Request):
     return request.session.get("user")
 
@@ -189,12 +183,10 @@ async def login(request: Request, username: str = Form(...), password: str = For
 async def register(request: Request, username: str = Form(...), password: str = Form(...)):
     db = SessionLocal()
     
-    # Check if user already exists
     if db.query(User).filter(User.username == username).first():
         db.close()
         return {"detail": "Username already exists"}, 400
     
-    # Hash password and create user
     hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
     user = User(username=username, password=hashed.decode("utf-8"))
     db.add(user)
@@ -330,18 +322,15 @@ async def admin_create_user(request: Request, username: str = Form(...), passwor
     if not request.session.get("admin"):
         return {"detail": "Unauthorized"}, 401
     
-    # Validate role
     if role not in ["user", "admin"]:
         return {"detail": "Invalid role"}, 400
     
     db = SessionLocal()
     
-    # Check if user already exists
     if db.query(User).filter(User.username == username).first():
         db.close()
         return {"detail": "Username already exists"}, 400
     
-    # Hash password and create user
     hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
     user = User(
         username=username,
@@ -367,7 +356,6 @@ async def admin_delete_user(request: Request, user_id: int):
         db.close()
         return {"detail": "User not found"}, 404
     
-    # Prevent deleting admins
     if user.role == "admin":
         db.close()
         return {"detail": "Cannot delete admin users"}, 403
@@ -420,8 +408,6 @@ async def serve_games(request: Request):
 
 @app.get("/games/{slug}")
 async def serve_games_slug(request: Request, slug: str):
-    # Catch-all so /games/fishing and /games/spacefunk survive a hard reload.
-    # The JS reads location.pathname on load and auto-launches the right game.
     if not request.session.get("user"):
         return RedirectResponse("/login", status_code=302)
     return FileResponse("pages/games.html")
@@ -463,8 +449,8 @@ async def websocket_endpoint(ws: WebSocket):
     print(f"[WS] Browser connected ({len(connections)} total)")
     await ws.send_text(json.dumps({"type": "init"}))
     if manager.is_bridge_connected:
-        await manager.get_devices()  # result broadcasts via on_devices_list
-        await manager.get_status()   # result broadcasts via on_status
+        await manager.get_devices()
+        await manager.get_status()
 
     async def heartbeat():
         while True:
@@ -522,7 +508,6 @@ async def handle_message(ws: WebSocket, msg: dict):
             asyncio.create_task(manager.do_mode_switch(address, current_mode))
 
     elif action == "sensor_metrics":
-        # Phone is sending live BLE sensor data — broadcast to all clients
         active = msg.get("active", False)
         asyncio.create_task(broadcast({"type": "sensor_state", "active": active}))
         asyncio.create_task(broadcast({
@@ -543,33 +528,13 @@ async def serve_fishing_game(request: Request):
         return RedirectResponse("/login", status_code=302)
     return RedirectResponse("/FishingGame/", status_code=302)
 
-# Assets are served by the StaticFiles mount at the bottom of this file
 
 
-# These root-level asset routes are superseded by the /FishingGame StaticFiles mount
-# @app.get("/index.js")
-# async def serve_js():
-#     return FileResponse("games/FishingGame/index.js")
 
-# @app.get("/index.wasm")
-# async def serve_wasm():
-#     return FileResponse("games/FishingGame/index.wasm")
 
-# @app.get("/index.pck")
-# async def serve_pck():
-#     return FileResponse("games/FishingGame/index.pck")
 
-# @app.get("/index.png")
-# async def serve_png():
-#     return FileResponse("games/FishingGame/index.png")
 
-# @app.get("/index.icon.png")
-# async def serve_icon():
-#     return FileResponse("games/FishingGame/index.icon.png")
 
-# @app.get("/index.audio.worklet.js")
-# async def serve_audio_worklet():
-#     return FileResponse("games/FishingGame/index.audio.worklet.js")
 
 @app.get("/api/me")
 async def get_me(request: Request):
@@ -587,13 +552,11 @@ async def get_me(request: Request):
 async def catch_fish(depth: float, patient_id: int = 1, location_id: int = 1):
     db = SessionLocal()
     try:
-        # Get player's caught fish and check location completion
         caught = fishing_db.get_caught_ids(db, patient_id)
         location_fish = [f for f in FISH if f["location_id"] == location_id]
         location_fish_ids = {f["id"] for f in location_fish}
         location_complete = location_fish_ids.issubset(caught) if location_fish_ids else False
 
-        # Check if we should try a mystery fish (30% chance when location complete)
         use_mystery = location_complete and random.random() < 0.3
         if use_mystery:
             mystery = MYSTERY_FISH_BY_LOCATION.get(location_id)
@@ -601,7 +564,6 @@ async def catch_fish(depth: float, patient_id: int = 1, location_id: int = 1):
         else:
             pool = location_fish if location_fish else FISH
 
-        # Use fish_logic to pick a fish based on depth and rarity
         selected_fish = fish_logic.pick_fish(depth, location_id, pool)
         
         if not selected_fish:
@@ -611,7 +573,6 @@ async def catch_fish(depth: float, patient_id: int = 1, location_id: int = 1):
                 "new_achievements": []
             }
 
-        # Try to catch the selected fish
         result = fish_logic.try_catch_fish(selected_fish, depth, location_id)
 
         if not result["caught"]:
@@ -621,7 +582,6 @@ async def catch_fish(depth: float, patient_id: int = 1, location_id: int = 1):
                 "new_achievements": []
             }
 
-        # Fish caught! Save and check achievements
         caught_fish = selected_fish
         is_new = fishing_db.save_catch(db, patient_id, caught_fish["id"], location_id, depth)
         caught_after = fishing_db.get_caught_ids(db, patient_id)
@@ -739,12 +699,10 @@ async def get_player_stats(user_id: int):
 async def save_spacefunk_score(score: int, distance_m: float, user_id: int):
     db = SessionLocal()
     try:
-        # 1. Insert the new run
         run = SpaceFunkRun(user_id=user_id, score=score, distance_m=distance_m)
         db.add(run)
-        db.flush()  # get the run's id without committing yet
+        db.flush()
 
-        # 2. Upsert cumulative stats
         stats = db.query(SpaceFunkStats).filter(SpaceFunkStats.user_id == user_id).first()
         if stats is None:
             stats = SpaceFunkStats(
@@ -760,7 +718,6 @@ async def save_spacefunk_score(score: int, distance_m: float, user_id: int):
             if score > stats.best_score:
                 stats.best_score = score
 
-        # 3. Prune oldest runs if over the cap
         all_runs = (
             db.query(SpaceFunkRun)
             .filter(SpaceFunkRun.user_id == user_id)
@@ -786,13 +743,11 @@ async def my_stats(request: Request, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404)
 
-    # Fishing stats
     total_catches = db.query(FishCatch).filter(FishCatch.user_id == user.id).count()
     unique_fish   = db.query(FishCollection).filter(FishCollection.user_id == user.id).count()
     stats         = get_stats(db, user.id)
     achievements  = get_unlocked_achievements(db, user.id)
 
-    # SpaceFunk stats
     sf_stats = db.query(SpaceFunkStats).filter(SpaceFunkStats.user_id == user.id).first()
     sf_total_runs = sf_stats.total_runs       if sf_stats else 0
     sf_best_score = sf_stats.best_score       if sf_stats else 0
