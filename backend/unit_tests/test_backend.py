@@ -6,6 +6,7 @@ import os
 import importlib.util
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+SENSOR_DEVICE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'sensor_device'))
 
 
 class TestSensorConstants(unittest.TestCase):
@@ -13,7 +14,7 @@ class TestSensorConstants(unittest.TestCase):
     def test_uuids_exist(self):
         spec = importlib.util.spec_from_file_location(
             "constants",
-            os.path.join(os.path.dirname(__file__), '..', 'sensor_device', 'constants.py')
+            os.path.join(SENSOR_DEVICE_DIR, 'constants.py')
         )
         constants = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(constants)
@@ -23,7 +24,7 @@ class TestSensorConstants(unittest.TestCase):
     def test_locations_mapping(self):
         spec = importlib.util.spec_from_file_location(
             "constants",
-            os.path.join(os.path.dirname(__file__), '..', 'sensor_device', 'constants.py')
+            os.path.join(SENSOR_DEVICE_DIR, 'constants.py')
         )
         constants = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(constants)
@@ -37,7 +38,7 @@ class TestSensorModels(unittest.TestCase):
     def test_device_info_basic(self):
         spec = importlib.util.spec_from_file_location(
             "models",
-            os.path.join(os.path.dirname(__file__), '..', 'sensor_device', 'models.py')
+            os.path.join(SENSOR_DEVICE_DIR, 'models.py')
         )
         models = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(models)
@@ -55,7 +56,7 @@ class TestSensorModels(unittest.TestCase):
     def test_device_display_name(self):
         spec = importlib.util.spec_from_file_location(
             "models",
-            os.path.join(os.path.dirname(__file__), '..', 'sensor_device', 'models.py')
+            os.path.join(SENSOR_DEVICE_DIR, 'models.py')
         )
         models = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(models)
