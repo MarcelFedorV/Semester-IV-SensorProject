@@ -376,12 +376,6 @@ async def logout(request: Request):
     request.session.clear()
     return RedirectResponse("/login", status_code=302)
 
-@app.get("/ble")
-async def serve_ble(request: Request):
-    if not request.session.get("user"):
-        return RedirectResponse("/login", status_code=302)
-    return FileResponse("index.html")
-
 @app.get("/developers")
 async def serve_dev(request: Request):
     if not request.session.get("user"):
