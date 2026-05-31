@@ -1,1 +1,0 @@
-CapsuleShape3D
