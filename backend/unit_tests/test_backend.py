@@ -4,6 +4,7 @@ import unittest
 import sys
 import os
 import importlib.util
+from unittest.mock import patch
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SENSOR_DEVICE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'sensor_device'))
@@ -96,6 +97,24 @@ class TestFishLogic(unittest.TestCase):
         result = get_depth_multiplier("Common", 0.5)
         self.assertGreater(result, 0)
 
+    def test_depth_multiplier_boundary_surface(self):
+        from fish_logic import get_depth_multiplier
+        # Surface depth (0.0) should boost common fish
+        result_common = get_depth_multiplier("Common", 0.0)
+        self.assertGreater(result_common, 1.0)  # should have surface boost
+
+    def test_depth_multiplier_boundary_deep(self):
+        from fish_logic import get_depth_multiplier
+        # Deep depth (1.0) should boost legendary fish
+        result_legendary = get_depth_multiplier("Legendary", 1.0)
+        self.assertGreater(result_legendary, 2.0)  # should have deep boost
+
+    def test_depth_multiplier_unknown_rarity(self):
+        from fish_logic import get_depth_multiplier
+        # Unknown rarity should still return positive multiplier
+        result = get_depth_multiplier("UnknownRarity", 0.5)
+        self.assertGreater(result, 0)
+
     def test_pick_fish_empty_pool(self):
         from fish_logic import pick_fish
         result = pick_fish(0.5, 1, [])
@@ -109,6 +128,16 @@ class TestFishLogic(unittest.TestCase):
             result = pick_fish(0.5, 1, pool)
             if result:
                 self.assertIn('id', result)
+
+    def test_pick_fish_deterministic(self):
+        from fish_logic import pick_fish
+        from unittest.mock import patch
+        pool = [{"id": 1, "name": "Test", "rarity": "Common", "location_id": 1}]
+        # Mock random.random to always return 0.1 (should pick first fish)
+        with patch('random.random', return_value=0.1):
+            result = pick_fish(0.5, 1, pool)
+            self.assertIsNotNone(result)
+            self.assertEqual(result["id"], 1)
 
 
 class TestFishAgent(unittest.TestCase):
@@ -161,6 +190,19 @@ class TestAchievements(unittest.TestCase):
         for ach in ACHIEVEMENTS:
             self.assertIn('id', ach)
             self.assertIn('name', ach)
+
+    def test_achievement_fields_complete(self):
+        from achievements import ACHIEVEMENTS
+        # Validate all achievements have required fields and no empty values
+        for ach in ACHIEVEMENTS:
+            self.assertIsNotNone(ach.get('id'))
+            self.assertIsNotNone(ach.get('name'))
+            self.assertTrue(len(str(ach.get('name', ''))) > 0)
+
+    def test_achievement_ids_unique(self):
+        from achievements import ACHIEVEMENTS
+        ids = [a['id'] for a in ACHIEVEMENTS]
+        self.assertEqual(len(ids), len(set(ids)))
 
 
 class TestDatabase(unittest.TestCase):

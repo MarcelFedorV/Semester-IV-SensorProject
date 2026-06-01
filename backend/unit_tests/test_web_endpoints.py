@@ -59,5 +59,25 @@ class TestWebEndpoints(unittest.TestCase):
         self.assertIn('locations', data)
         self.assertIsInstance(data['locations'], list)
 
+    def test_stats_me_unauthorized(self):
+        # Unauthenticated request to /api/stats/me should return 401
+        resp = client.get('/api/stats/me')
+        self.assertEqual(resp.status_code, 401)
+
+    def test_stats_global_endpoint(self):
+        # GET /api/stats/global should return 200 with a list
+        resp = client.get('/api/stats/global')
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIsInstance(data, list)
+
+    def test_protected_pages_redirect_to_login(self):
+        # Verify protected pages redirect unauthenticated users to /login
+        protected_paths = ['/games', '/spacefunk', '/fishinggame', '/developers']
+        for path in protected_paths:
+            resp = client.get(path, follow_redirects=False)
+            self.assertIn(resp.status_code, (302, 307))
+            self.assertIn('/login', resp.headers.get('location', ''))
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
