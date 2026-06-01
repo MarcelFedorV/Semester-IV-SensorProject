@@ -50,9 +50,6 @@ class FishAgent:
         }
 
     def run(self, depth: float, location_id: int) -> dict:
-        """
-        Full agent loop: perceive → decide → act
-        """
         percepts = self.perceive(depth, location_id)
         decision = self.decide(percepts)
         result   = self.act(decision)

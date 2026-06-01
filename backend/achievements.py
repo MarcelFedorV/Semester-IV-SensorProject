@@ -1,7 +1,6 @@
-# achievements.py
 
 ACHIEVEMENTS = [
-    # ── Fishing achievements ──────────────────────────────
+    #Fishing achievements 
     {
         "id":          "first_catch",
         "name":        "First Catch!",
@@ -87,7 +86,7 @@ ACHIEVEMENTS = [
         "category":    "fishing",
     },
 
-    # ── Distance achievements ─────────────────────────────
+    #Distance achievements
     {
         "id":          "distance_first",
         "name":        "First Pedal",

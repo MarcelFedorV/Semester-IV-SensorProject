@@ -7,48 +7,28 @@ import sys
 import random
 import mimetypes
 
-mimetypes.add_type("application/wasm",        ".wasm")
+mimetypes.add_type("application/wasm",         ".wasm")
 mimetypes.add_type("application/octet-stream", ".pck")
+
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from sqlalchemy.orm import Session
-from database import SessionLocal, engine, Base, run_migrations, get_db
-from fastapi.responses import FileResponse, HTMLResponse
-from fastapi.staticfiles import StaticFiles
-import uvicorn
-from fish_logic import pick_fish
-from fish_data import FISH_BY_ID, FISH
-
-from ble_client import BLEClient
-
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Depends, Form, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
-from passlib.context import CryptContext
-from database import SessionLocal, engine, Base, run_migrations
+from sqlalchemy.orm import Session
+from database import SessionLocal, engine, Base, run_migrations, get_db
 from models import User
-from fishing_models import FishCatch, FishCollection, AchievementUnlock
+from fishing_models import FishCatch, FishCollection
 from spacefunk_models import SpaceFunkRun, SpaceFunkStats, SF_MAX_RUNS
+from achievements import ACHIEVEMENTS, ACHIEVEMENTS_BY_ID
+from fish_data import FISH, LOCATIONS, MYSTERY_FISH_BY_LOCATION, LOCATIONS_BY_ID
+from fishing_db import get_stats, get_unlocked_achievements
+from ble_client import BLEClient
 import fishing_db
+import fish_logic
 import bcrypt
 import uvicorn
-from fish_data import FISH_BY_ID, FISH, LOCATIONS, MYSTERY_FISH_BY_LOCATION, LOCATIONS_BY_ID
-from sensor_device import BLEManager
-from achievements import ACHIEVEMENTS, ACHIEVEMENTS_BY_ID
-from fish_agent import FishAgent
-import fish_logic
-
-from fishing_models import PlayerStats
-from fishing_db import get_stats, get_collection, get_unlocked_achievements
-
-
-
-
-app = FastAPI()
-
-
 if sys.platform == "win32":
     asyncio.set_event_loop(asyncio.SelectorEventLoop())
 
