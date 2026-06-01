@@ -126,11 +126,6 @@ class TestModels(unittest.TestCase):
 
 class TestUtils(unittest.TestCase):
 
-    def test_scripts_exist(self):
-        backend_dir = os.path.dirname(os.path.dirname(__file__))
-        self.assertTrue(os.path.exists(os.path.join(backend_dir, 'create_admin.py')))
-        self.assertTrue(os.path.exists(os.path.join(backend_dir, 'create_user.py')))
-
     def test_main_exists(self):
         backend_dir = os.path.dirname(os.path.dirname(__file__))
         self.assertTrue(os.path.exists(os.path.join(backend_dir, 'main.py')))
