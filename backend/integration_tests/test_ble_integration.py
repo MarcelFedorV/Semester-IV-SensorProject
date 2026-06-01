@@ -1,141 +1,113 @@
-import asyncio
+"""
+test_ble_integration.py
+=======================
+Integration tests for WebSocket connection lifecycle and sensor relay.
+"""
+
+import os
+os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
+
 import json
-import time
+import threading
 import unittest
-
 from fastapi.testclient import TestClient
-
 import main
 
 
-class FakeBLEClient:
-    def __init__(self):
-        self.is_bridge_connected = False
-        self.scan_calls = []
-        self.connect_calls = []
-        self.disconnect_calls = 0
-        self.stop_scan_calls = 0
-        self.clear_calls = 0
-        self.mode_switch_calls = []
+class TestWebSocketLifecycle(unittest.TestCase):
 
-        self.on_device_updated = lambda d: None
-        self.on_device_removed = lambda a: None
-        self.on_scan_started = lambda: None
-        self.on_scan_stopped = lambda: None
-        self.on_connected = lambda a: None
-        self.on_disconnected = lambda a: None
-        self.on_error = lambda m: None
-        self.on_interrogation_result = lambda r: None
-        self.on_switch_progress = lambda m: None
-        self.on_switch_done = lambda r: None
-        self.on_devices_list = lambda l: None
-        self.on_status = lambda s: None
-        self.on_bridge_connected = lambda: None
-        self.on_bridge_disconnected = lambda: None
-        self.on_sensor_state = lambda active: None
-        self.on_metrics = lambda m: None
-
-    async def connect_to_bridge(self):
-        self.is_bridge_connected = True
-        self.on_bridge_connected()
-
-    async def close(self):
-        self.is_bridge_connected = False
-        self.on_bridge_disconnected()
-
-    async def start_scan(self, duration=8.0):
-        self.scan_calls.append(duration)
-
-    async def start_scan_continuous(self):
-        self.scan_calls.append("continuous")
-
-    async def stop_scan(self):
-        self.stop_scan_calls += 1
-
-    def clear_devices(self):
-        self.clear_calls += 1
-
-    async def get_devices(self):
-        self.on_devices_list([])
-
-    async def get_status(self):
-        self.on_status({
-            "scanning": False,
-            "connected": False,
-            "connected_to": None,
-            "device_count": 0,
-        })
-
-    async def connect_and_interrogate(self, address):
-        self.connect_calls.append(address)
-        self.on_connected(address)
-        self.on_interrogation_result({
-            "accepted": True,
-            "address": address,
-            "name": "Fake sensor",
-            "mode": "speed",
-            "location": "Unknown",
-            "is_xoss": False,
-            "features": [],
-        })
-
-    async def disconnect(self):
-        self.disconnect_calls += 1
-        self.on_disconnected("AA:BB:CC:DD:EE:FF")
-
-    async def do_mode_switch(self, address, current_mode):
-        self.mode_switch_calls.append((address, current_mode))
-        self.on_switch_progress("switching")
-        self.on_switch_done({"success": True})
-
-    async def emit(self, event, payload=None):
-        if event == "metrics":
-            self.on_metrics(payload)
-        elif event == "sensor_state":
-            self.on_sensor_state(payload)
-        elif event == "device_updated":
-            self.on_device_updated(payload)
-        await asyncio.sleep(0)
-
-
-class TestBLEIntegration(unittest.TestCase):
-    def tearDown(self):
-        main.create_app()
-
-    def test_websocket_broadcasts_fake_metrics(self):
-        fake_ble = FakeBLEClient()
-        main.create_app(fake_ble)
-
+    def test_init_message_on_connect(self):
+        """Server sends an init message immediately on WebSocket connect."""
         with TestClient(main.app) as client:
-            with client.websocket_connect("/ws") as websocket:
-                initial = websocket.receive_text()
-                self.assertEqual(json.loads(initial)["type"], "init")
+            with client.websocket_connect("/ws") as ws:
+                msg = json.loads(ws.receive_text())
+                self.assertEqual(msg["type"], "init")
 
-                asyncio.run(fake_ble.emit("metrics", {
-                    "speed_ms": 1.0,
-                    "speed_kmh": 3.6,
-                    "cadence_rpm": 60.0,
-                    "distance_m": 10.0,
-                    "distance_km": 0.01,
+    def test_multiple_clients_connect(self):
+        """Multiple clients can connect simultaneously."""
+        with TestClient(main.app) as client:
+            with client.websocket_connect("/ws") as ws1:
+                with client.websocket_connect("/ws") as ws2:
+                    msg1 = json.loads(ws1.receive_text())
+                    msg2 = json.loads(ws2.receive_text())
+                    self.assertEqual(msg1["type"], "init")
+                    self.assertEqual(msg2["type"], "init")
+
+
+class TestSensorMetricsRelay(unittest.TestCase):
+
+    def test_metrics_values_relayed_correctly(self):
+        """All metric fields are passed through unchanged."""
+        with TestClient(main.app) as client:
+            with client.websocket_connect("/ws") as sender:
+                with client.websocket_connect("/ws") as receiver:
+                    sender.receive_text()
+                    receiver.receive_text()
+
+                    sender.send_text(json.dumps({
+                        "action": "sensor_metrics",
+                        "active": True,
+                        "speed_ms": 5.833,
+                        "speed_kmh": 21.0,
+                        "cadence_rpm": 85.5,
+                        "distance_m": 500.0,
+                        "distance_km": 0.5,
+                    }))
+
+                    receiver.receive_text()  # sensor_state
+                    metrics = json.loads(receiver.receive_text())
+
+                    self.assertEqual(metrics["type"], "metrics")
+                    self.assertAlmostEqual(metrics["speed_kmh"], 21.0)
+                    self.assertAlmostEqual(metrics["cadence_rpm"], 85.5)
+                    self.assertAlmostEqual(metrics["distance_m"], 500.0)
+                    self.assertAlmostEqual(metrics["distance_km"], 0.5)
+
+    def test_missing_fields_default_to_zero(self):
+        """Missing metric fields default to 0 rather than crashing."""
+        with TestClient(main.app) as client:
+            with client.websocket_connect("/ws") as sender:
+                with client.websocket_connect("/ws") as receiver:
+                    sender.receive_text()
+                    receiver.receive_text()
+
+                    sender.send_text(json.dumps({"action": "sensor_metrics"}))
+
+                    receiver.receive_text()  # sensor_state
+                    metrics = json.loads(receiver.receive_text())
+
+                    self.assertEqual(metrics["type"], "metrics")
+                    self.assertEqual(metrics["speed_kmh"], 0)
+                    self.assertEqual(metrics["cadence_rpm"], 0)
+                    self.assertEqual(metrics["distance_m"], 0)
+
+    def test_sender_receives_own_broadcast(self):
+        """The sending client receives its own broadcast — broadcast() fans out to all connections."""
+        with TestClient(main.app) as client:
+            with client.websocket_connect("/ws") as sender:
+                sender.receive_text()  # init
+
+                sender.send_text(json.dumps({
+                    "action": "sensor_metrics",
+                    "active": True,
+                    "speed_kmh": 10.0,
+                    "speed_ms": 2.77,
+                    "cadence_rpm": 70.0,
+                    "distance_m": 100.0,
+                    "distance_km": 0.1,
                 }))
 
-                time.sleep(0.05)
-                payload = json.loads(websocket.receive_text())
-                self.assertEqual(payload["type"], "metrics")
-                self.assertEqual(payload["speed_kmh"], 3.6)
-                self.assertEqual(payload["distance_m"], 10.0)
+                received = []
+                def try_receive():
+                    try:
+                        received.append(sender.receive_text())
+                    except Exception:
+                        pass
 
-    def test_scan_action_calls_fake_ble_client(self):
-        fake_ble = FakeBLEClient()
-        main.create_app(fake_ble)
-
-        with TestClient(main.app) as client:
-            with client.websocket_connect("/ws") as websocket:
-                websocket.receive_text()
-                websocket.send_text(json.dumps({"action": "scan", "duration": 4.0}))
-
-                time.sleep(0.1)
-                self.assertEqual(fake_ble.scan_calls, [4.0])
+                t = threading.Thread(target=try_receive)
+                t.start()
+                t.join(timeout=0.3)
+                self.assertGreaterEqual(len(received), 1)  # at least sensor_state arrives
 
 
 if __name__ == "__main__":

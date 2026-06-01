@@ -47,9 +47,19 @@
     </header>
 
     <div class="main">
-        <iframe src="/SpaceFunk/index.html" width="1152" height="648" allowfullscreen></iframe>
-
+        <iframe src="/SpaceFunk/index.html" id="gameFrame" width="1152" height="648" allowfullscreen></iframe>
     </div>
+
+    <script>
+        fetch('/api/me')
+            .then(r => r.ok ? r.json() : null)
+            .then(d => {
+                if (d && d.id) {
+                    const frame = document.getElementById('gameFrame');
+                    frame.src = '/SpaceFunk/index.html?uid=' + d.id;
+                }
+            });
+    </script>
 
     <footer>
         <p class="languageclass" id="shared-footer-prefix">SEMESTER-IV-SENSORPROJECT &nbsp;·&nbsp; Meet the team of</p> <a href="/developers"><p class="languageclass" id="shared-footer-link">Group 11</p></a>

@@ -1,68 +1,10 @@
-# Unit tests for core backend modules: sensor device, fish data, fish logic, agent, achievements, and database.
+# Unit tests for core backend modules: fish data, fish logic, agent, achievements, and database.
 
 import unittest
 import sys
 import os
-import importlib.util
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-
-class TestSensorConstants(unittest.TestCase):
-
-    def test_uuids_exist(self):
-        spec = importlib.util.spec_from_file_location(
-            "constants",
-            os.path.join(os.path.dirname(__file__), '..', 'sensor_device', 'constants.py')
-        )
-        constants = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(constants)
-        self.assertIsInstance(constants.CSC_SERVICE, str)
-        self.assertIsInstance(constants.CSC_MEASUREMENT, str)
-
-    def test_locations_mapping(self):
-        spec = importlib.util.spec_from_file_location(
-            "constants",
-            os.path.join(os.path.dirname(__file__), '..', 'sensor_device', 'constants.py')
-        )
-        constants = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(constants)
-        self.assertIsInstance(constants.CSC_LOCATIONS, dict)
-        self.assertEqual(constants.CSC_LOCATIONS[0], "Other")
-        self.assertEqual(constants.CSC_LOCATIONS[12], "Rear Wheel")
-
-
-class TestSensorModels(unittest.TestCase):
-
-    def test_device_info_basic(self):
-        spec = importlib.util.spec_from_file_location(
-            "models",
-            os.path.join(os.path.dirname(__file__), '..', 'sensor_device', 'models.py')
-        )
-        models = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(models)
-        device = models.DeviceInfo(
-            address="AA:BB:CC:DD:EE:FF",
-            name="Test Sensor",
-            rssi=-50,
-            last_seen="2024-01-01",
-            connectable=True
-        )
-        self.assertEqual(device.address, "AA:BB:CC:DD:EE:FF")
-        self.assertEqual(device.name, "Test Sensor")
-        self.assertEqual(device.rssi, -50)
-
-    def test_device_display_name(self):
-        spec = importlib.util.spec_from_file_location(
-            "models",
-            os.path.join(os.path.dirname(__file__), '..', 'sensor_device', 'models.py')
-        )
-        models = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(models)
-        device1 = models.DeviceInfo(address="AA:BB:CC:DD:EE:FF", name="My Sensor", rssi=-50, last_seen="now", connectable=True)
-        self.assertEqual(device1.display_name, "My Sensor")
-        device2 = models.DeviceInfo(address="AA:BB:CC:DD:EE:FF", name="", rssi=-50, last_seen="now", connectable=True)
-        self.assertIn("AA:BB:CC:DD:EE:FF", device2.display_name)
 
 
 class TestFishData(unittest.TestCase):

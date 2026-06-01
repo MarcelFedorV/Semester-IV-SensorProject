@@ -1,6 +1,6 @@
 extends CharacterBody2D
 
-const BASE_URL = "https://game.sensorproject.org"
+var BASE_URL: String = "https://game.sensorproject.org"
 
 @export var camera: Camera2D
 @export var fuel_label: Label
@@ -64,9 +64,15 @@ func _ready() -> void:
 	var ws_url: String
 	if OS.has_feature("web"):
 		var host = JavaScriptBridge.eval("window.location.hostname")
-		ws_url = "ws://localhost:8000/ws" if host == "localhost" else "wss://game.sensorproject.org/ws"
+		if host == "localhost" or host == "127.0.0.1":
+			BASE_URL = "http://localhost:8000"
+			ws_url   = "ws://localhost:8000/ws"
+		else:
+			BASE_URL = "https://game.sensorproject.org"
+			ws_url   = "wss://game.sensorproject.org/ws"
 	else:
-		ws_url = "ws://localhost:8000/ws"
+		BASE_URL = "http://localhost:8000"
+		ws_url   = "ws://localhost:8000/ws"
 	_socket.connect_to_url(ws_url)
 
 	_fetch_user_id()

@@ -1,68 +1,70 @@
+"""
+test_ble_connect_action.py
+==========================
+Integration tests for sensor WebSocket relay behaviour.
+Verifies that sensor_metrics sent by one client are broadcast to others.
+"""
+
+import os
+os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
+
 import json
-import time
 import unittest
-
 from fastapi.testclient import TestClient
-
 import main
 
 
-class FakeBLEClient:
-    def __init__(self):
-        self.is_bridge_connected = False
-        self.connect_calls = []
-        self.on_connected = lambda a: None
-        self.on_interrogation_result = lambda r: None
+class TestSensorMetricsRelay(unittest.TestCase):
 
-    async def connect_to_bridge(self):
-        self.is_bridge_connected = True
-
-    async def close(self):
-        self.is_bridge_connected = False
-
-    async def start_scan(self, duration=8.0):
-        pass
-
-    async def connect_and_interrogate(self, address):
-        self.connect_calls.append(address)
-        self.on_connected(address)
-        self.on_interrogation_result({
-            "accepted": True,
-            "address": address,
-            "name": "Fake sensor",
-            "mode": "speed",
-            "location": "Unknown",
-            "is_xoss": False,
-            "features": [],
-        })
-
-    async def disconnect(self):
-        pass
-
-
-class TestBLEConnectAction(unittest.TestCase):
-    def tearDown(self):
-        main.create_app()
-
-    def test_connect_action_broadcasts_connecting(self):
-        fake_ble = FakeBLEClient()
-        main.create_app(fake_ble)
-
+    def test_sensor_metrics_broadcast_to_other_clients(self):
+        """A sensor_metrics message sent by one client is rebroadcast to others."""
         with TestClient(main.app) as client:
-            with client.websocket_connect("/ws") as websocket:
-                websocket.receive_text()  # init
+            with client.websocket_connect("/ws") as sender:
+                with client.websocket_connect("/ws") as receiver:
+                    sender.receive_text()   # init
+                    receiver.receive_text() # init
 
-                websocket.send_text(json.dumps({
-                    "action": "connect",
-                    "address": "AA:BB:CC:DD:EE:FF",
-                }))
+                    sender.send_text(json.dumps({
+                        "action": "sensor_metrics",
+                        "active": True,
+                        "speed_ms": 2.1,
+                        "speed_kmh": 7.56,
+                        "cadence_rpm": 60.0,
+                        "distance_m": 21.0,
+                        "distance_km": 0.021,
+                    }))
 
-                time.sleep(0.1)
-                self.assertEqual(fake_ble.connect_calls, ["AA:BB:CC:DD:EE:FF"])
+                    state = json.loads(receiver.receive_text())
+                    self.assertEqual(state["type"], "sensor_state")
+                    self.assertTrue(state["active"])
 
-                payload = json.loads(websocket.receive_text())
-                self.assertEqual(payload["type"], "connecting")
-                self.assertEqual(payload["address"], "AA:BB:CC:DD:EE:FF")
+                    metrics = json.loads(receiver.receive_text())
+                    self.assertEqual(metrics["type"], "metrics")
+                    self.assertAlmostEqual(metrics["speed_kmh"], 7.56)
+                    self.assertAlmostEqual(metrics["cadence_rpm"], 60.0)
+                    self.assertAlmostEqual(metrics["distance_m"], 21.0)
+
+    def test_inactive_sensor_broadcasts_false(self):
+        """active=False is relayed correctly."""
+        with TestClient(main.app) as client:
+            with client.websocket_connect("/ws") as sender:
+                with client.websocket_connect("/ws") as receiver:
+                    sender.receive_text()
+                    receiver.receive_text()
+
+                    sender.send_text(json.dumps({
+                        "action": "sensor_metrics",
+                        "active": False,
+                        "speed_ms": 0,
+                        "speed_kmh": 0,
+                        "cadence_rpm": 0,
+                        "distance_m": 0,
+                        "distance_km": 0,
+                    }))
+
+                    state = json.loads(receiver.receive_text())
+                    self.assertEqual(state["type"], "sensor_state")
+                    self.assertFalse(state["active"])
 
 
 if __name__ == "__main__":

@@ -1,0 +1,10 @@
+{
+  "unit_tests/test_backend.py::TestFishData": true,
+  "unit_tests/test_backend.py::TestFishLogic": true,
+  "unit_tests/test_backend.py::TestFishAgent": true,
+  "unit_tests/test_backend.py::TestAchievements": true,
+  "unit_tests/test_backend.py::TestDatabase": true,
+  "unit_tests/test_backend.py::TestModels": true,
+  "unit_tests/test_backend.py::TestUtils": true,
+  "integration_tests/test_ble_integration.py::TestSensorMetricsRelay::test_sender_does_not_receive_own_broadcast": true
+}

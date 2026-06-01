@@ -9,10 +9,9 @@ async function loadMyStats() {
         const data = await res.json();
         const f = data.fishing;
 
-        document.getElementById('stat-catches').textContent     = f.total_catches;
-        document.getElementById('stat-unique').textContent      = f.unique_fish;
-        document.getElementById('stat-distance').textContent    = f.total_distance_km + ' km';
-        document.getElementById('stat-sessions').textContent    = f.total_sessions;
+        document.getElementById('stat-catches').textContent      = f.total_catches;
+        document.getElementById('stat-unique').textContent       = f.unique_fish;
+        document.getElementById('stat-distance').textContent     = f.total_distance_km + ' km';
         document.getElementById('stat-achievements').textContent = f.achievements;
 
         // SpaceFunk personal stats come from the same endpoint

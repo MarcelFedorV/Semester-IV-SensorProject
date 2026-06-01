@@ -10,49 +10,30 @@ import mimetypes
 mimetypes.add_type("application/wasm",        ".wasm")
 mimetypes.add_type("application/octet-stream", ".pck")
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from sqlalchemy.orm import Session
-from database import SessionLocal, engine, Base, run_migrations, get_db
-from fastapi.responses import FileResponse, HTMLResponse
-from fastapi.staticfiles import StaticFiles
-import uvicorn
-from fish_logic import pick_fish
-from fish_data import FISH_BY_ID, FISH
-
-from ble_client import BLEClient
-
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Depends, Form, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 from passlib.context import CryptContext
-from database import SessionLocal, engine, Base, run_migrations
+from database import SessionLocal, engine, Base, run_migrations, get_db
 from models import User
-from fishing_models import FishCatch, FishCollection, AchievementUnlock
+from fishing_models import FishCatch, FishCollection, AchievementUnlock, PlayerStats
 from spacefunk_models import SpaceFunkRun, SpaceFunkStats, SF_MAX_RUNS
-import fishing_db
-import bcrypt
-import uvicorn
+from fish_logic import pick_fish
 from fish_data import FISH_BY_ID, FISH, LOCATIONS, MYSTERY_FISH_BY_LOCATION, LOCATIONS_BY_ID
-from sensor_device import BLEManager
 from achievements import ACHIEVEMENTS, ACHIEVEMENTS_BY_ID
 from fish_agent import FishAgent
-import fish_logic
-
-from fishing_models import PlayerStats
 from fishing_db import get_stats, get_collection, get_unlocked_achievements
+import fishing_db
+import fish_logic
+import bcrypt
+import uvicorn
 
 
 
 
-app = FastAPI()
-
-
-if sys.platform == "win32":
-    asyncio.set_event_loop(asyncio.SelectorEventLoop())
-
-manager     = BLEClient()
 connections: list[WebSocket] = []
 
 
@@ -66,57 +47,10 @@ async def broadcast(msg: dict):
         connections.remove(ws)
 
 
-def wire_ble_callbacks(target_manager):
-    target_manager.on_device_updated       = lambda d: asyncio.create_task(broadcast({"type": "device_updated",        "device":  d}))
-    target_manager.on_device_removed       = lambda a: asyncio.create_task(broadcast({"type": "device_removed",        "address": a}))
-    target_manager.on_scan_started         = lambda:   asyncio.create_task(broadcast({"type": "scan_started"}))
-    target_manager.on_scan_stopped         = lambda:   asyncio.create_task(broadcast({"type": "scan_stopped"}))
-    target_manager.on_connected            = lambda a: asyncio.create_task(broadcast({"type": "connected",             "address": a}))
-    target_manager.on_disconnected         = lambda a: asyncio.create_task(broadcast({"type": "disconnected",          "address": a}))
-    target_manager.on_error                = lambda m: asyncio.create_task(broadcast({"type": "error",                 "message": m}))
-    target_manager.on_interrogation_result = lambda r: asyncio.create_task(broadcast({"type": "interrogation_result", "result":  r}))
-    target_manager.on_switch_progress      = lambda m: asyncio.create_task(broadcast({"type": "switch_progress",       "message": m}))
-    target_manager.on_switch_done          = lambda r: asyncio.create_task(broadcast({"type": "switch_done",           "result":  r}))
-    target_manager.on_devices_list         = lambda l: asyncio.create_task(broadcast({"type": "devices_list", "devices": l}))
-    target_manager.on_status               = lambda s: asyncio.create_task(broadcast({"type": "status",       "status":  s}))
-    target_manager.on_sensor_state         = lambda active: asyncio.create_task(broadcast({"type": "sensor_state", "active": active}))
-
-
-def _on_metrics(m: dict):
-    print(
-        f"[Sensor] speed={m['speed_kmh']:5.1f} km/h  "
-        f"cadence={m['cadence_rpm']:5.1f} rpm  "
-        f"distance={m['distance_m']:6.1f} m"
-    )
-    asyncio.create_task(broadcast({"type": "metrics", **m}))
-
-
-def create_app(ble_client=None):
-    global manager, connections
-    manager = ble_client if ble_client is not None else BLEClient()
-    connections = []
-    wire_ble_callbacks(manager)
-    manager.on_metrics = _on_metrics
-    return app
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if os.getenv("BLE_BRIDGE_ENABLED", "false").lower() == "true":
-        try:
-            await manager.connect_to_bridge()
-        except Exception as e:
-            print(f"[BLE] Bridge not available ({e}) — running without BLE bridge")
-    else:
-        print("[BLE] Bridge disabled — using Web Bluetooth (browser-side)")
     print("[Server] Ready at http://localhost:8000")
     yield
-    if manager.is_bridge_connected:
-        try:
-            await manager.disconnect()
-            await manager.stop_scan()
-        except Exception:
-            pass
 
 class SecurityHeadersMiddleware:
     """Pure ASGI middleware — streams large files without buffering."""
@@ -442,9 +376,6 @@ async def websocket_endpoint(ws: WebSocket):
     connections.append(ws)
     print(f"[WS] Browser connected ({len(connections)} total)")
     await ws.send_text(json.dumps({"type": "init"}))
-    if manager.is_bridge_connected:
-        await manager.get_devices()
-        await manager.get_status()
 
     async def heartbeat():
         while True:
@@ -473,35 +404,7 @@ async def handle_message(ws: WebSocket, msg: dict):
     action = msg.get("action")
     print(f"[WS] {msg}")
 
-    if action == "scan":
-        asyncio.create_task(manager.start_scan(duration=float(msg.get("duration", 8.0))))
-
-    elif action == "scan_continuous":
-        asyncio.create_task(manager.start_scan_continuous())
-
-    elif action == "stop_scan":
-        await manager.stop_scan()
-
-    elif action == "clear":
-        manager.clear_devices()
-        await broadcast({"type": "cleared"})
-
-    elif action == "connect":
-        address = msg.get("address")
-        if address:
-            asyncio.create_task(manager.connect_and_interrogate(address))
-            await broadcast({"type": "connecting", "address": address})
-
-    elif action == "disconnect":
-        await manager.disconnect()
-
-    elif action == "mode_switch":
-        address      = msg.get("address")
-        current_mode = msg.get("current_mode")
-        if address and current_mode:
-            asyncio.create_task(manager.do_mode_switch(address, current_mode))
-
-    elif action == "sensor_metrics":
+    if action == "sensor_metrics":
         active = msg.get("active", False)
         asyncio.create_task(broadcast({"type": "sensor_state", "active": active}))
         asyncio.create_task(broadcast({
@@ -806,8 +709,6 @@ app.mount("/languages", StaticFiles(directory="pages/languages"), name="language
 
 if os.path.exists("games/SpaceFunk/index.html"):
     app.mount("/SpaceFunk", StaticFiles(directory="games/SpaceFunk", html=True), name="space")
-
-create_app()
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
